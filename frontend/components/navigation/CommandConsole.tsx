@@ -3,9 +3,10 @@ import React, { useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  LayoutDashboard, Calendar, Radio, Users, Bot, TrendingUp, Settings
+  LayoutDashboard, Calendar, Radio, Users, Bot, TrendingUp, Settings, UserCheck, Shield
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
+import { useAuth } from '@/context/AuthContext'
 import { SPRING } from '@/lib/constants'
 
 const NAV_ITEMS = [
@@ -22,6 +23,7 @@ export function CommandConsole() {
   const router = useRouter()
   const pathname = usePathname()
   const { openSettings } = useApp()
+  const { user, openAuthModal, logout } = useAuth()
   const [hoveredId, setHoveredId] = useState<string | null>(null)
 
   const getActiveId = () => {
@@ -119,6 +121,29 @@ export function CommandConsole() {
           </div>
         )
       })}
+
+      {/* Operator Clearance Action */}
+      <div className="h-5 w-[1px] bg-white/10 mx-1 flex-shrink-0" />
+      <div
+        className="relative flex items-center justify-center cursor-pointer flex-shrink-0"
+        style={{ width: 40, height: 40 }}
+        onClick={user ? logout : openAuthModal}
+        title={user ? `Signed in as ${user.email} (Click to Sign Out)` : 'Operator Clearance (Sign In)'}
+      >
+        <div
+          className="w-7 h-7 rounded-full flex items-center justify-center border transition-all"
+          style={{
+            background: user ? 'rgba(0,255,135,0.1)' : 'rgba(255,255,255,0.05)',
+            borderColor: user ? '#00FF87' : 'rgba(255,255,255,0.15)',
+          }}
+        >
+          {user ? (
+            <UserCheck size={14} className="text-[#00FF87]" />
+          ) : (
+            <Shield size={13} className="text-gray-400" />
+          )}
+        </div>
+      </div>
     </nav>
   )
 }

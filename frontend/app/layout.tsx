@@ -1,8 +1,10 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { AppProvider } from '@/context/AppContext'
+import { AuthProvider } from '@/context/AuthContext'
 import { CommandConsole } from '@/components/navigation/CommandConsole'
 import { SettingsPanel } from '@/components/settings/SettingsPanel'
+import { AuthModal } from '@/components/auth/AuthModal'
 
 export const metadata: Metadata = {
   title: 'OFFSIDE — AI Football War Room',
@@ -24,13 +26,16 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body suppressHydrationWarning style={{ background: '#050508', color: '#F0F4F8', fontFamily: 'Inter, sans-serif', minHeight: '100vh', width: '100%' }}>
-        <AppProvider>
-          <div className="w-full flex flex-col items-center" style={{ minHeight: '100vh', paddingBottom: 96 }}>
-            {children}
-          </div>
-          <CommandConsole />
-          <SettingsPanel />
-        </AppProvider>
+        <AuthProvider>
+          <AppProvider>
+            <div className="w-full flex flex-col items-center" style={{ minHeight: '100vh', paddingBottom: 96 }}>
+              {children}
+            </div>
+            <CommandConsole />
+            <SettingsPanel />
+            <AuthModal />
+          </AppProvider>
+        </AuthProvider>
       </body>
     </html>
   )
