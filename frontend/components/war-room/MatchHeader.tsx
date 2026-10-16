@@ -48,19 +48,20 @@ export function MatchHeader({ match, prediction, isLoading }: MatchHeaderProps) 
           <>
             {/* Home team */}
             <div className="flex items-center gap-3">
-              <span className="font-mono text-[13px] tracking-wide text-right" style={{ color: '#F0F4F8', maxWidth: 120, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: '#38BDF8' }} />
+              <span className="font-mono text-[13px] md:text-[14px] font-semibold tracking-wide text-right" style={{ color: '#F0F4F8', maxWidth: 140, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {match?.home_team.name ?? 'HOME'}
               </span>
               <MomentumRing score={momentumScore} size={40} strokeWidth={2.5} />
             </div>
 
             {/* Score */}
-            <div className="flex items-center gap-2 px-4">
-              <span className="font-mono font-bold" style={{ fontSize: 40, lineHeight: 1, color: '#F0F4F8' }}>
+            <div className="flex items-center gap-2 px-3 py-1 rounded-[6px]" style={{ background: '#0F1117', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <span className="font-mono font-bold" style={{ fontSize: 36, lineHeight: 1, color: '#38BDF8', minWidth: 24, textAlign: 'center' }}>
                 {homeGoals ?? '—'}
               </span>
-              <span className="font-mono text-[20px]" style={{ color: '#6B7280' }}>:</span>
-              <span className="font-mono font-bold" style={{ fontSize: 40, lineHeight: 1, color: '#F0F4F8' }}>
+              <span className="font-mono text-[18px]" style={{ color: '#6B7280' }}>:</span>
+              <span className="font-mono font-bold" style={{ fontSize: 36, lineHeight: 1, color: '#F43F5E', minWidth: 24, textAlign: 'center' }}>
                 {awayGoals ?? '—'}
               </span>
             </div>
@@ -68,9 +69,10 @@ export function MatchHeader({ match, prediction, isLoading }: MatchHeaderProps) 
             {/* Away team */}
             <div className="flex items-center gap-3">
               <MomentumRing score={100 - momentumScore} size={40} strokeWidth={2.5} />
-              <span className="font-mono text-[13px] tracking-wide" style={{ color: '#F0F4F8', maxWidth: 120, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <span className="font-mono text-[13px] md:text-[14px] font-semibold tracking-wide" style={{ color: '#F0F4F8', maxWidth: 140, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {match?.away_team.name ?? 'AWAY'}
               </span>
+              <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: '#F43F5E' }} />
             </div>
           </>
         )}
@@ -80,14 +82,14 @@ export function MatchHeader({ match, prediction, isLoading }: MatchHeaderProps) 
       <div className="flex items-center gap-3 justify-end" style={{ minWidth: 200 }}>
         {!isLoading && match && (
           <>
-            <div className="flex items-center gap-1">
-              <MapPin size={10} style={{ color: '#6B7280' }} />
-              <span className="font-mono text-[10px]" style={{ color: '#6B7280' }}>
+            <div className="flex items-center gap-1.5 hidden md:flex">
+              <MapPin size={12} style={{ color: '#6B7280' }} />
+              <span className="font-mono text-[11px]" style={{ color: '#94A3B8' }}>
                 {match.venue.name} • {match.venue.city}
               </span>
             </div>
             {match.status === 'live' && match.minute && (
-              <span className="font-mono font-semibold text-[14px]" style={{ color: '#00FF87', animation: 'livePulse 2s ease-in-out infinite' }}>
+              <span className="font-mono font-bold text-[14px] px-2 py-0.5 rounded-[4px]" style={{ background: 'rgba(239,68,68,0.15)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.3)', animation: 'livePulse 2s ease-in-out infinite' }}>
                 {match.minute}&apos;
               </span>
             )}

@@ -10,10 +10,10 @@ import { useInsights } from '@/hooks/useMatchData'
 // ---------------------------------------------------------------------------
 
 const HERO_STATS = [
-  { value: '57.6%', label: 'MODEL ACCURACY', color: '#00FF87', sparkline: [52, 53, 55, 54, 56, 57, 57.2, 57.6] },
-  { value: '32,359', label: 'MATCHES TRAINED', color: '#3B82F6', sparkline: [28000, 29200, 30100, 30800, 31400, 31900, 32100, 32359] },
-  { value: '336', label: 'TEAMS INDEXED', color: '#7C3AED', sparkline: [300, 310, 318, 322, 328, 331, 334, 336] },
-  { value: 'ELO DIFF', label: 'TOP FEATURE', color: '#F59E0B', sparkline: [38, 39, 41, 42, 43, 43.5, 44, 44] },
+  { value: '57.6%', label: 'MODEL ACCURACY', desc: 'Across 32k+ international matches', color: '#00FF87' },
+  { value: '32,359', label: 'MATCHES TRAINED', desc: 'Full historical tournament set', color: '#38BDF8' },
+  { value: '336', label: 'TEAMS INDEXED', desc: 'Global national & club Elo', color: '#7C3AED' },
+  { value: '44%', label: 'ELO DIFF IMPORTANCE', desc: 'Single largest predictive feature', color: '#F59E0B' },
 ]
 
 interface Discovery {
@@ -142,6 +142,8 @@ function MiniSparkline({ data, color }: { data: number[]; color: string }) {
   )
 }
 
+import { PageShell, PageHeader } from '@/components/shared/PageShell'
+
 export default function InsightsPage() {
   const { accuracy, discoveries: liveDiscoveries, rankings: liveRankings, predLog: livePredLog, isLoading } = useInsights()
   const [sortCol, setSortCol] = useState<keyof PlayerRanking | null>(null)
@@ -149,10 +151,10 @@ export default function InsightsPage() {
 
   // Dynamic hero stats pulled from model metadata
   const heroStats = accuracy ? [
-    { value: `${accuracy.model_accuracy}%`, label: 'MODEL ACCURACY', color: '#00FF87', sparkline: accuracy.sparkline || [52, 53, 55, 54, 56, 57, 57.2, 57.6] },
-    { value: accuracy.matches_trained.toLocaleString(), label: 'MATCHES TRAINED', color: '#3B82F6', sparkline: [28000, 29200, 30100, 30800, 31400, 31900, 32100, accuracy.matches_trained] },
-    { value: accuracy.teams_indexed.toString(), label: 'TEAMS INDEXED', color: '#7C3AED', sparkline: [300, 310, 318, 322, 328, 331, 334, accuracy.teams_indexed] },
-    { value: accuracy.top_feature || 'ELO DIFF', label: 'TOP FEATURE', color: '#F59E0B', sparkline: [38, 39, 41, 42, 43, 43.5, 44, 44] },
+    { value: `${accuracy.model_accuracy}%`, label: 'MODEL ACCURACY', desc: 'Validated test set accuracy', color: '#00FF87' },
+    { value: accuracy.matches_trained.toLocaleString(), label: 'MATCHES TRAINED', desc: 'Global matches dataset', color: '#38BDF8' },
+    { value: accuracy.teams_indexed.toString(), label: 'TEAMS INDEXED', desc: 'Active international clubs & nations', color: '#7C3AED' },
+    { value: '44%', label: 'ELO DIFF IMPORTANCE', desc: 'Primary predictive weight', color: '#F59E0B' },
   ] : HERO_STATS
 
   const discoveriesList = liveDiscoveries.length > 0 ? liveDiscoveries : DISCOVERIES
@@ -182,32 +184,25 @@ export default function InsightsPage() {
   })
 
   return (
-    <div style={{ minHeight: '100vh', width: '100%', background: '#050508', boxSizing: 'border-box', overflowX: 'hidden' }}>
-      {/* Header */}
-      <div style={{ padding: '32px 32px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, letterSpacing: '0.15em', color: '#6B7280', margin: 0, marginBottom: 4 }}>
-          SYSTEM
-        </p>
-        <h1 style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: 28, fontWeight: 700, color: '#F0F4F8', margin: 0 }}>
-          Insights &amp; Model Performance
-        </h1>
-      </div>
+    <PageShell>
+      <PageHeader
+        eyebrow="SYSTEM TELEMETRY &amp; EVALUATION"
+        title="Insights &amp; Model Performance"
+        subtitle="Empirical evaluation of the XGBoost classifier, Elo feature importances, and tactical discoveries."
+      />
 
-      <div style={{ padding: '24px 32px', display: 'flex', flexDirection: 'column', gap: 32, boxSizing: 'border-box' }}>
-
+      <div className="flex flex-col gap-8">
         {/* Hero stat cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-          {heroStats.map(({ value, label, color, sparkline }) => (
-            <div key={label} style={{ padding: 20, borderRadius: 4, background: '#0F1117', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontWeight: 700, fontSize: 40, color, lineHeight: 1, display: 'block', marginBottom: 4 }}>
-                {value}
-              </span>
-              <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, letterSpacing: '0.15em', color: '#6B7280' }}>
-                {label}
-              </span>
-              <div style={{ marginTop: 12, height: 32 }}>
-                <MiniSparkline data={sparkline} color={color} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {heroStats.map(({ value, label, desc, color }) => (
+            <div key={label} className="p-5 rounded-[8px] bg-[#0F1117] border border-white/10 flex flex-col justify-between">
+              <div>
+                <span className="font-mono text-[11px] tracking-wider text-gray-500 block mb-2">{label}</span>
+                <span className="font-mono font-bold text-[38px] leading-none block mb-2" style={{ color }}>
+                  {value}
+                </span>
               </div>
+              <p className="text-[12px] text-gray-400 mt-2 pt-2 border-t border-white/5 font-mono">{desc}</p>
             </div>
           ))}
         </div>
@@ -382,6 +377,6 @@ export default function InsightsPage() {
         </div>
 
       </div>
-    </div>
+    </PageShell>
   )
 }

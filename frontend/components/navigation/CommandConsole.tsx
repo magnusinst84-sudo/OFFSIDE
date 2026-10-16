@@ -45,7 +45,8 @@ export function CommandConsole() {
   }
 
   return (
-    <div
+    <nav
+      aria-label="Primary Navigation"
       className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-1 px-4"
       style={{
         height: 56,
@@ -95,29 +96,29 @@ export function CommandConsole() {
               />
             </motion.div>
 
-            {/* Hover label */}
+            {/* Hover tooltip */}
             <AnimatePresence>
               {isHovered && (
-                <motion.span
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 4 }}
-                  transition={{ duration: 0.1 }}
-                  className="absolute font-mono text-[9px] tracking-wider pointer-events-none"
+                <motion.div
+                  initial={{ opacity: 0, y: 4, scale: 0.92 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 4, scale: 0.92 }}
+                  transition={{ duration: 0.12 }}
+                  className="absolute font-mono text-[11px] font-semibold tracking-wider pointer-events-none px-2.5 py-1 rounded-[4px] bg-[#0F1117] border border-white/[0.1] shadow-lg z-50 flex items-center gap-1.5"
                   style={{
-                    color: isActive ? '#00FF87' : '#94A3B8',
-                    bottom: -18,
+                    color: isActive ? '#00FF87' : '#F0F4F8',
+                    top: -36,
                     whiteSpace: 'nowrap',
-                    letterSpacing: '0.08em',
                   }}
                 >
-                  {item.label.toUpperCase()}
-                </motion.span>
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: isActive ? '#00FF87' : '#6B7280' }} />
+                  {item.label}
+                </motion.div>
               )}
             </AnimatePresence>
           </div>
         )
       })}
-    </div>
+    </nav>
   )
 }

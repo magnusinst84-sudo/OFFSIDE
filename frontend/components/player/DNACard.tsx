@@ -73,24 +73,26 @@ export function DNACard({ player }: DNACardProps) {
             </div>
 
             {/* Attribute bars */}
-            <div className="mt-2 flex flex-col gap-1.5">
+            <div className="mt-3 flex flex-col gap-2">
               {Object.entries(player.attributes).slice(0, 4).map(([key, val]) => (
-                <div key={key} className="flex items-center gap-2">
-                  <span className="font-mono text-[9px] w-16" style={{ color: '#6B7280' }}>
-                    {key.toUpperCase().slice(0, 5)}
+                <div key={key} className="flex items-center gap-2.5">
+                  <span className="font-mono text-[11px] w-20 text-gray-400 font-medium">
+                    {key.toUpperCase().slice(0, 6)}
                   </span>
-                  <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                  <div className="flex-1 h-1.5 rounded-full overflow-hidden bg-white/10">
                     <div
-                      className="h-full rounded-full"
-                      style={{ width: `${val}%`, background: 'linear-gradient(90deg, #00FF87, #3B82F6)' }}
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${val}%`, background: 'linear-gradient(90deg, #00FF87, #38BDF8)' }}
                     />
                   </div>
-                  <span className="font-mono text-[9px] w-6 text-right" style={{ color: '#94A3B8' }}>{val}</span>
+                  <span className="font-mono text-[11px] w-8 text-right font-semibold text-white">{val}</span>
                 </div>
               ))}
             </div>
 
-            <p className="mt-2 font-mono text-[9px]" style={{ color: '#6B7280' }}>CLICK TO FLIP →</p>
+            <div className="mt-3 flex items-center justify-between pt-2 border-t border-white/5">
+              <span className="font-mono text-[10px] text-gray-500">CLICK CARD TO FLIP FOR AI AUDIT ↻</span>
+            </div>
           </div>
         </div>
 

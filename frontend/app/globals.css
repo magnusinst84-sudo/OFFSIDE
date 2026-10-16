@@ -2,20 +2,43 @@
 
 @import "tailwindcss";
 
-/* ─── CSS Custom Properties ─────────────────────────── */
+/* ─── CSS Custom Properties / Design Tokens ──────────── */
 :root {
+  /* Surfaces */
+  --color-bg: #050508;
+  --color-surface-1: #0F1117;
+  --color-surface-2: #1A1D27;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-subtle: rgba(255, 255, 255, 0.04);
+
+  /* Typography */
+  --color-text: #F0F4F8;
+  --color-text-muted: #94A3B8;
+  --color-text-faint: #6B7280;
+
+  /* Brand & Actions */
+  --color-accent: #00FF87;
   --accent: #00FF87;
+
+  /* Strict Semantic Team & State Colors */
+  --color-home: #38BDF8;      /* Team A (Electric Sky Cyan) */
+  --color-away: #F43F5E;      /* Team B (Vibrant Coral/Rose) */
+  --color-draw: #64748B;      /* Draw / Neutral Gray */
+  --color-live: #EF4444;      /* Live red status indicator */
+  --color-warn: #F59E0B;      /* Upset alert & caution amber */
+  --color-success: #10B981;   /* Correct outcome */
+  --color-danger: #F43F5E;    /* Incorrect outcome */
+
+  /* Legacy aliases for backward compatibility */
   --bg-black: #050508;
   --bg-primary: #0F1117;
   --bg-secondary: #1A1D27;
   --momentum-green: #00FF87;
-  --pressure-red: #E8003D;
-  --electric-blue: #3B82F6;
-  --royal-purple: #7C3AED;
-  --amber: #F59E0B;
-  --cool-gray: #6B7280;
+  --pressure-red: #EF4444;
+  --electric-blue: #38BDF8;
   --chalk-white: #F0F4F8;
   --muted-gray: #94A3B8;
+  --cool-gray: #6B7280;
 }
 
 /* ─── Base Reset ────────────────────────────────────── */

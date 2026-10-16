@@ -4,8 +4,9 @@ import { useParams, useRouter } from 'next/navigation'
 import { getPlayerById as getPlayerLocal, searchPlayersLocal } from '@/lib/data/players'
 import { getPlayerById as getPlayerApi, getPlayerDNA } from '@/lib/api'
 import { DNACard } from '@/components/player/DNACard'
+import { PageShell, PageHeader } from '@/components/shared/PageShell'
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer } from 'recharts'
-import { Search } from 'lucide-react'
+import { Search, ChevronLeft, ArrowUpRight } from 'lucide-react'
 
 const FALLBACK_PLAYER_ID = 'fra-mbappe'
 
@@ -37,7 +38,10 @@ export default function PlayerPage() {
             id: res.id,
             name: res.name,
             team: res.team || 'International',
+            club: res.club || 'Top European Club',
             position: res.position || 'Forward',
+            age: res.age || 25,
+            height_cm: res.height_cm || 182,
             dna_score: dnaRes?.dna_score || 84,
             attributes: dnaRes?.attributes || { pace: 80, dribbling: 82, passing: 78, shooting: 80, defending: 50, physicality: 70 },
             role_suitability: dnaRes?.role_suitability || { striker: 85, winger: 80, cam: 70, cm: 60 },
@@ -69,8 +73,8 @@ export default function PlayerPage() {
 
   if (loading || !player) {
     return (
-      <div className="flex items-center justify-center" style={{ minHeight: '100vh', background: '#050508' }}>
-        <p className="font-mono text-[13px] tracking-widest text-[#00FF87] animate-pulse">LOADING PLAYER DNA...</p>
+      <div className="flex items-center justify-center min-h-screen bg-[#050508]">
+        <p className="font-mono text-[14px] tracking-widest text-[#00FF87] animate-pulse">LOADING PLAYER DNA...</p>
       </div>
     )
   }
@@ -87,217 +91,241 @@ export default function PlayerPage() {
   ]
 
   const stats = [
-    { label: 'GOALS', value: player.goals },
-    { label: 'ASSISTS', value: player.assists },
+    { label: 'GOALS', value: player.goals ?? 0 },
+    { label: 'ASSISTS', value: player.assists ?? 0 },
     { label: 'XG', value: typeof player.xg === 'number' ? player.xg.toFixed(2) : player.xg ?? '—' },
     { label: 'XA', value: typeof player.xa === 'number' ? player.xa.toFixed(2) : player.xa ?? '—' },
     { label: 'MINUTES', value: player.minutes_played ? player.minutes_played.toLocaleString() : '—' },
   ]
 
   return (
-    <div style={{ minHeight: '100vh', background: '#050508' }}>
-      {/* Header */}
-      <div className="px-8 pt-8 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <p className="font-mono text-[10px] tracking-widest mb-1" style={{ color: '#6B7280' }}>PLAYER INTELLIGENCE</p>
-        <h1 style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: 24, fontWeight: 700, color: '#F0F4F8' }}>
-          {player.name}
-        </h1>
+    <PageShell>
+      {/* Back button and quick search */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-6">
+        <button
+          onClick={() => router.push('/players')}
+          className="inline-flex items-center gap-2 text-gray-400 hover:text-white font-mono text-[12px] transition-colors cursor-pointer"
+        >
+          <ChevronLeft size={16} />
+          <span>BACK TO ROSTER</span>
+        </button>
+
+        {/* Search */}
+        <div className="relative w-full sm:w-72">
+          <div className="flex items-center gap-2 px-3.5 py-2 rounded-[6px] bg-[#0F1117] border border-white/10">
+            <Search size={14} className="text-gray-400" />
+            <input
+              type="text"
+              placeholder="SEARCH ANOTHER PLAYER..."
+              value={searchQuery}
+              onChange={e => {
+                setSearchQuery(e.target.value)
+                setSearchOpen(true)
+              }}
+              onBlur={() => setTimeout(() => setSearchOpen(false), 200)}
+              className="bg-transparent outline-none w-full font-mono text-[12px] text-white placeholder-gray-500"
+            />
+          </div>
+          {searchOpen && searchResults.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-1 rounded-[6px] overflow-hidden z-50 bg-[#0F1117] border border-white/10 shadow-xl">
+              {searchResults.map(p => (
+                <button
+                  key={p.id}
+                  className="w-full flex items-center justify-between px-3.5 py-2.5 transition-colors text-left hover:bg-white/5 cursor-pointer border-b border-white/5 last:border-0"
+                  onMouseDown={() => router.push(`/player/${p.id}`)}
+                >
+                  <span className="font-mono text-[12px] text-white">{p.name}</span>
+                  <span className="font-mono text-[10px] text-gray-400">{p.team}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Three-column layout */}
-      <div className="flex gap-0" style={{ minHeight: 'calc(100vh - 120px)' }}>
+      <PageHeader
+        eyebrow="PLAYER INTELLIGENCE &amp; DNA"
+        title={player.name}
+        subtitle={`${player.team || player.club} • ${player.position} • #${player.number ?? 10}`}
+      />
 
-        {/* Left — 280px */}
-        <div className="flex-shrink-0 p-6 flex flex-col gap-5" style={{ width: 280, borderRight: '1px solid rgba(255,255,255,0.06)' }}>
-          {/* Portrait */}
-          <div className="rounded-[4px] flex items-center justify-center" style={{ aspectRatio: '3/4', background: 'linear-gradient(to bottom, #1A1D27, #0F1117)', maxHeight: 180, overflow: 'hidden' }}>
-            <span className="font-mono text-[40px]" style={{ opacity: 0.2 }}>
-              {player.name.slice(0, 1)}
-            </span>
-          </div>
+      {/* Main Grid Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-          {/* DNA Score */}
-          <div>
-            <span className="font-mono font-bold" style={{ fontSize: 56, color: '#00FF87', lineHeight: 1 }}>
-              {player.dna_score}
-            </span>
-            <p className="font-mono text-[10px] tracking-widest" style={{ color: '#6B7280' }}>AI DNA SCORE</p>
-          </div>
-
-          {/* Player sub-stats */}
-          <div className="flex flex-wrap gap-3">
-            <span className="font-mono text-[12px]" style={{ color: '#94A3B8' }}>{player.position}</span>
-            <span className="font-mono text-[12px]" style={{ color: '#94A3B8' }}>{player.age} YRS</span>
-            <span className="font-mono text-[12px]" style={{ color: '#94A3B8' }}>{player.height_cm}CM</span>
-            <span className="font-mono text-[12px]" style={{ color: '#94A3B8' }}>{player.club}</span>
-          </div>
-
-          {/* Stats table */}
-          <div className="flex flex-col">
-            {stats.map((s, i) => (
-              <div key={s.label}>
-                <div className="flex items-center justify-between py-2">
-                  <span className="font-mono text-[10px] tracking-widest" style={{ color: '#6B7280' }}>{s.label}</span>
-                  <span className="font-mono text-[14px] font-medium" style={{ color: '#F0F4F8' }}>{s.value}</span>
-                </div>
-                {i < stats.length - 1 && <div style={{ height: 1, background: 'rgba(255,255,255,0.04)' }} />}
+        {/* Left Column — Bio & Core Numbers (4 cols) */}
+        <div className="lg:col-span-4 flex flex-col gap-6">
+          <div className="p-6 rounded-[8px] bg-[#0F1117] border border-white/10 flex flex-col gap-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-mono text-[11px] tracking-wider text-gray-500">AI DNA SCORE</p>
+                <span className="font-mono font-bold text-[56px] leading-none text-[#00FF87]">
+                  {player.dna_score}
+                </span>
               </div>
-            ))}
+              <div className="h-16 w-16 rounded-[6px] bg-gradient-to-br from-[#1A1D27] to-[#0F1117] border border-white/10 flex items-center justify-center">
+                <span className="font-mono text-[24px] font-bold text-gray-400">
+                  {player.name.slice(0, 1)}
+                </span>
+              </div>
+            </div>
+
+            {/* Badges */}
+            <div className="flex flex-wrap gap-2 pt-2 border-t border-white/5">
+              <span className="font-mono text-[11px] px-2.5 py-1 rounded-[4px] bg-white/5 text-gray-300">{player.position}</span>
+              <span className="font-mono text-[11px] px-2.5 py-1 rounded-[4px] bg-white/5 text-gray-300">{player.age ?? 26} YRS</span>
+              <span className="font-mono text-[11px] px-2.5 py-1 rounded-[4px] bg-white/5 text-gray-300">{player.height_cm ?? 180} CM</span>
+              <span className="font-mono text-[11px] px-2.5 py-1 rounded-[4px] bg-[#00FF87]/10 text-[#00FF87] border border-[#00FF87]/20">TIER 1</span>
+            </div>
+
+            {/* Stats Table */}
+            <div className="flex flex-col pt-3 border-t border-white/5">
+              {stats.map((s, i) => (
+                <div key={s.label} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+                  <span className="font-mono text-[11px] tracking-wider text-gray-400">{s.label}</span>
+                  <span className="font-mono text-[14px] font-semibold text-white">{s.value}</span>
+                </div>
+              ))}
+            </div>
           </div>
+
+          {/* DNA Holographic Interactive Card */}
+          <DNACard player={player} />
         </div>
 
-        {/* Center — flex */}
-        <div className="flex-1 p-6 flex flex-col gap-6">
-          {/* Radar chart */}
-          <div>
-            <p className="font-mono text-[11px] tracking-widest mb-3" style={{ color: '#6B7280' }}>ATTRIBUTE PROFILE</p>
-            <div style={{ height: 300 }}>
+        {/* Center Column — Visuals: Radar Chart & Shot Map (5 cols) */}
+        <div className="lg:col-span-5 flex flex-col gap-6">
+          {/* Radar Chart Card */}
+          <div className="p-6 rounded-[8px] bg-[#0F1117] border border-white/10 flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <p className="font-mono text-[11px] tracking-wider text-gray-400">HEXAGONAL ATTRIBUTE RADAR</p>
+              <span className="font-mono text-[11px] text-[#00FF87]">TACTICAL PROFILE</span>
+            </div>
+            <div className="h-[320px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={radarData}>
-                  <PolarGrid stroke="rgba(255,255,255,0.06)" />
+                <RadarChart data={radarData} outerRadius="75%">
+                  <PolarGrid stroke="rgba(255,255,255,0.08)" />
                   <PolarAngleAxis
                     dataKey="attribute"
-                    tick={{ fontFamily: 'IBM Plex Mono', fontSize: 10, fill: '#6B7280' }}
+                    tick={{ fontFamily: 'IBM Plex Mono', fontSize: 11, fill: '#94A3B8', fontWeight: 600 }}
                   />
                   <Radar
                     name="Attributes"
                     dataKey="value"
                     stroke="#00FF87"
                     fill="#00FF87"
-                    fillOpacity={0.15}
-                    strokeWidth={1.5}
+                    fillOpacity={0.2}
+                    strokeWidth={2}
                   />
                 </RadarChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          {/* Shot Map */}
-          <div>
-            <p className="font-mono text-[11px] tracking-widest mb-3" style={{ color: '#6B7280' }}>SHOT MAP</p>
-            <div className="relative rounded-[4px] overflow-hidden" style={{ height: 200, background: '#0D1F14', border: '1px solid rgba(255,255,255,0.04)' }}>
+          {/* Shot Map Card */}
+          <div className="p-6 rounded-[8px] bg-[#0F1117] border border-white/10 flex flex-col">
+            <div className="flex items-center justify-between mb-3">
+              <p className="font-mono text-[11px] tracking-wider text-gray-400">ATTACKING SHOT MAP &amp; XG ZONES</p>
+              <div className="flex items-center gap-3 text-[10px] font-mono text-gray-400">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#00FF87]" /> Goal</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#38BDF8]" /> Saved</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#F43F5E]" /> Off</span>
+              </div>
+            </div>
+
+            <div className="relative rounded-[6px] overflow-hidden bg-[#0a1710] border border-white/5 h-[220px]">
               <svg viewBox="0 0 100 60" className="w-full h-full">
-                {/* Half pitch */}
+                {/* Half pitch markings */}
                 <rect x="5" y="2" width="90" height="56" stroke="rgba(255,255,255,0.12)" strokeWidth="0.5" fill="none" />
                 <rect x="25" y="2" width="50" height="20" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" fill="none" />
                 <rect x="37" y="2" width="26" height="8" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" fill="none" />
-                <line x1="5" y1="58" x2="95" y2="58" stroke="rgba(255,255,255,0.06)" strokeWidth="0.4" />
+                <circle cx="50" cy="14" r="0.6" fill="rgba(255,255,255,0.3)" />
+                <line x1="5" y1="58" x2="95" y2="58" stroke="rgba(255,255,255,0.08)" strokeWidth="0.5" strokeDasharray="1.5 1.5" />
+
                 {(player.shot_map || player.shots || []).map((shot: any, i: number) => (
                   <circle
                     key={i}
                     cx={shot.x}
-                    cy={shot.y * 0.6}
-                    r={1.5 + (shot.xg || 0.1) * 5}
-                    fill={shot.outcome === 'goal' ? '#00FF87' : shot.outcome === 'on_target' ? '#F59E0B' : '#E8003D'}
-                    fillOpacity={0.8}
+                    cy={shot.y * 0.58}
+                    r={2 + (shot.xg || 0.15) * 4}
+                    fill={shot.outcome === 'goal' ? '#00FF87' : shot.outcome === 'on_target' ? '#38BDF8' : '#F43F5E'}
+                    fillOpacity={0.85}
+                    stroke="#FFFFFF"
+                    strokeWidth={0.3}
                   />
                 ))}
-                {/* Legend */}
-                <text x="6" y="57" fontFamily="IBM Plex Mono" fontSize="2.5" fill="#6B7280">● GOAL  ● ON TARGET  ● OFF</text>
               </svg>
               {(!player.shot_map || player.shot_map.length === 0) && (!player.shots || player.shots.length === 0) && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="font-mono text-[10px]" style={{ color: '#6B7280' }}>NO SHOT DATA — GOALKEEPER</span>
+                  <span className="font-mono text-[11px] text-gray-500">NO LIVE SHOT TELEMETRY AVAILABLE</span>
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* Right — 320px */}
-        <div className="flex-shrink-0 p-6 flex flex-col gap-5" style={{ width: 320, borderLeft: '1px solid rgba(255,255,255,0.06)' }}>
-          {/* Search */}
-          <div className="relative">
-            <div
-              className="flex items-center gap-2 px-3 py-2 rounded-[4px]"
-              style={{ background: '#0F1117', border: '1px solid rgba(255,255,255,0.08)' }}
-            >
-              <Search size={12} style={{ color: '#6B7280' }} />
-              <input
-                type="text"
-                placeholder="SEARCH PLAYER..."
-                value={searchQuery}
-                onChange={e => {
-                  setSearchQuery(e.target.value)
-                  setSearchOpen(true)
-                }}
-                onBlur={() => setTimeout(() => setSearchOpen(false), 200)}
-                className="bg-transparent outline-none w-full font-mono text-[11px] tracking-wider"
-                style={{ color: '#F0F4F8' }}
-              />
-            </div>
-            {searchOpen && searchResults.length > 0 && (
-              <div
-                className="absolute top-full left-0 right-0 mt-1 rounded-[4px] overflow-hidden z-50"
-                style={{ background: '#0F1117', border: '1px solid rgba(255,255,255,0.08)' }}
-              >
-                {searchResults.map((p) => (
-                  <button
-                    key={p.id}
-                    className="w-full flex items-center justify-between px-3 py-2 transition-colors text-left"
-                    style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
-                    onMouseDown={() => router.push(`/player/${p.id}`)}
-                  >
-                    <span className="font-mono text-[11px]" style={{ color: '#F0F4F8' }}>{p.name}</span>
-                    <span className="font-mono text-[9px]" style={{ color: '#6B7280' }}>{p.team}</span>
-                  </button>
+        {/* Right Column — AI Scouting Insights & Role Suitability (3 cols) */}
+        <div className="lg:col-span-3 flex flex-col gap-6">
+          {/* Tactical Strengths & Weaknesses */}
+          <div className="p-6 rounded-[8px] bg-[#0F1117] border border-white/10 flex flex-col gap-4">
+            <div>
+              <p className="font-mono text-[11px] tracking-wider text-[#00FF87] mb-2 font-semibold">TACTICAL STRENGTHS</p>
+              <div className="flex flex-col gap-1.5">
+                {(player.strengths || []).map((s: string, i: number) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <span className="text-[#00FF87] text-[12px] font-bold">✓</span>
+                    <span className="text-[12px] text-gray-300 leading-snug">{s}</span>
+                  </div>
                 ))}
               </div>
-            )}
+            </div>
+
+            <div className="pt-3 border-t border-white/5">
+              <p className="font-mono text-[11px] tracking-wider text-[#F43F5E] mb-2 font-semibold">TACTICAL VULNERABILITIES</p>
+              <div className="flex flex-col gap-1.5">
+                {(player.weaknesses || []).map((w: string, i: number) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <span className="text-[#F43F5E] text-[12px] font-bold">✗</span>
+                    <span className="text-[12px] text-gray-300 leading-snug">{w}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
-          {/* DNA Card */}
-          <DNACard player={player} />
-
-          {/* Strengths */}
-          <div>
-            <p className="font-mono text-[10px] tracking-widest mb-2" style={{ color: '#00FF87' }}>STRENGTHS</p>
-            {(player.strengths || []).map((s: string, i: number) => (
-              <div key={i} className="flex items-center gap-2 py-1">
-                <span style={{ color: '#00FF87', fontSize: 10 }}>✓</span>
-                <span className="font-mono text-[11px]" style={{ color: '#94A3B8' }}>{s}</span>
-              </div>
-            ))}
-            <p className="font-mono text-[10px] tracking-widest mt-3 mb-2" style={{ color: '#E8003D' }}>WEAKNESSES</p>
-            {(player.weaknesses || []).map((w: string, i: number) => (
-              <div key={i} className="flex items-center gap-2 py-1">
-                <span style={{ color: '#E8003D', fontSize: 10 }}>✗</span>
-                <span className="font-mono text-[11px]" style={{ color: '#94A3B8' }}>{w}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Role Suitability */}
-          <div>
-            <p className="font-mono text-[10px] tracking-widest mb-2" style={{ color: '#7C3AED' }}>ROLE SUITABILITY</p>
+          {/* Role Suitability Bars */}
+          <div className="p-6 rounded-[8px] bg-[#0F1117] border border-white/10 flex flex-col gap-3">
+            <p className="font-mono text-[11px] tracking-wider text-gray-400 font-semibold">TACTICAL ROLE FIT</p>
             {Object.entries(player.role_suitability || {}).map(([role, val]: [string, any]) => (
-              <div key={role} className="flex items-center gap-2 py-1">
-                <span className="font-mono text-[9px] w-16" style={{ color: '#6B7280' }}>{role.toUpperCase()}</span>
-                <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
-                  <div className="h-full rounded-full" style={{ width: `${val}%`, background: '#7C3AED' }} />
+              <div key={role} className="flex flex-col gap-1">
+                <div className="flex items-center justify-between text-[11px] font-mono">
+                  <span className="text-gray-400">{role.toUpperCase()}</span>
+                  <span className="text-white font-semibold">{val}%</span>
                 </div>
-                <span className="font-mono text-[9px] w-8 text-right" style={{ color: '#94A3B8' }}>{val}%</span>
+                <div className="h-2 rounded-full overflow-hidden bg-white/5">
+                  <div className="h-full rounded-full transition-all duration-500 bg-[#38BDF8]" style={{ width: `${val}%` }} />
+                </div>
               </div>
             ))}
           </div>
 
-          {/* Comparison */}
-          <div>
-            <p className="font-mono text-[10px] tracking-widest mb-2" style={{ color: '#6B7280' }}>SIMILAR PLAYERS</p>
+          {/* Benchmark Player Comparisons */}
+          <div className="p-6 rounded-[8px] bg-[#0F1117] border border-white/10 flex flex-col gap-3">
+            <p className="font-mono text-[11px] tracking-wider text-gray-400 font-semibold">ARCHETYPE SIMILARITIES</p>
             <div className="flex flex-wrap gap-2">
               {(player.comparison_players || []).map((name: string) => (
                 <span
                   key={name}
-                  className="font-mono text-[10px] px-2 py-1 rounded-[2px] cursor-pointer transition-colors"
-                  style={{ background: '#1A1D27', color: '#94A3B8', border: '1px solid rgba(255,255,255,0.04)' }}
+                  className="inline-flex items-center gap-1 font-mono text-[11px] px-2.5 py-1.5 rounded-[4px] bg-[#1A1D27] text-gray-300 border border-white/5"
                 >
                   {name}
+                  <ArrowUpRight size={12} className="text-gray-500" />
                 </span>
               ))}
             </div>
           </div>
         </div>
+
       </div>
-    </div>
+    </PageShell>
   )
 }

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { checkHealth, getInsights, getTeams } from '@/lib/api'
-import { ChevronRight, Zap } from 'lucide-react'
+import { ChevronRight, Zap, Dna, Bot } from 'lucide-react'
 
 interface BootLine {
   text: string
@@ -369,7 +369,7 @@ export default function LandingPage() {
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.9 }}
-                className="flex items-center gap-12 mt-20"
+                className="flex flex-wrap items-center justify-center gap-8 md:gap-14 mt-16"
               >
                 {[
                   { value: accuracy ? `${accuracy.toFixed(1)}%` : '57.6%', label: 'MODEL ACCURACY' },
@@ -378,10 +378,10 @@ export default function LandingPage() {
                   { value: '44%', label: 'ELO IMPORTANCE' },
                 ].map(({ value, label }) => (
                   <div key={label} className="flex flex-col items-center">
-                    <span className="font-mono font-bold" style={{ fontSize: 32, color: '#F0F4F8', lineHeight: 1 }}>
+                    <span className="font-mono font-bold text-[28px] md:text-[34px] text-white leading-none">
                       {value}
                     </span>
-                    <span className="font-mono text-[10px] tracking-widest mt-1" style={{ color: '#6B7280' }}>
+                    <span className="font-mono text-[11px] tracking-widest mt-1.5 text-gray-500">
                       {label}
                     </span>
                   </div>
@@ -389,36 +389,47 @@ export default function LandingPage() {
               </motion.div>
             </div>
 
-            {/* Feature strip - Extra Large Floating Glass Cards */}
+            {/* Feature strip - Modern Glass Tactical Cards */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1.1, duration: 0.6 }}
-              className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-24 mb-20 z-20 w-full max-w-[1200px] self-center px-8"
+              className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto px-6 z-20 w-full mb-32"
             >
               {[
-                { icon: '⚡', title: 'Momentum Engine', desc: 'Real-time momentum scoring from shots, possession and xG deltas.' },
-                { icon: '🧬', title: 'Player DNA Score', desc: 'AI-generated performance fingerprint across 6 tactical attributes.' },
-                { icon: '🤖', title: 'AI Tactical Center', desc: '4 distinct analyst personalities to chat about live match state.' },
+                {
+                  icon: <Zap size={28} className="text-[#00FF87]" />,
+                  title: 'Momentum Engine',
+                  desc: 'Real-time momentum scoring computed dynamically from shot quality, possession swings, and rolling xG deltas.',
+                },
+                {
+                  icon: <Dna size={28} className="text-[#38BDF8]" />,
+                  title: 'Player DNA Fingerprint',
+                  desc: 'Comprehensive scouting radar across 6 tactical attributes, with archetype similarity benchmarks and role fit indices.',
+                },
+                {
+                  icon: <Bot size={28} className="text-[#7C3AED]" />,
+                  title: 'AI Tactical Command',
+                  desc: '4 distinct analyst personalities (Broadcast, Tactical, Coach, Fan) streaming live commentary and match intelligence.',
+                },
               ].map(({ icon, title, desc }) => (
                 <div
                   key={title}
-                  className="px-10 py-12 rounded-[24px] flex flex-col gap-3 transition-all duration-300 hover:-translate-y-3"
-                  style={{ 
-                    background: 'rgba(15, 17, 23, 0.5)', 
-                    backdropFilter: 'blur(24px)',
-                    WebkitBackdropFilter: 'blur(24px)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderTop: '1px solid rgba(255,255,255,0.2)',
-                    boxShadow: '0 16px 50px rgba(0,0,0,0.6), inset 0 0 40px rgba(255,255,255,0.04)'
+                  className="p-8 rounded-[12px] flex flex-col gap-4 transition-all duration-300 hover:-translate-y-1"
+                  style={{
+                    background: 'rgba(15, 17, 23, 0.7)',
+                    backdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(255,255,255,0.08)',
                   }}
                 >
-                  <div className="text-6xl opacity-90 mb-6">{icon}</div>
-                  <div className="flex flex-col text-left">
-                    <h3 style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: 28, fontWeight: 700, color: '#F0F4F8', marginBottom: 16 }}>
+                  <div className="w-12 h-12 rounded-[8px] bg-white/5 border border-white/10 flex items-center justify-center">
+                    {icon}
+                  </div>
+                  <div>
+                    <h3 className="text-[20px] font-bold text-white mb-2" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
                       {title}
                     </h3>
-                    <p style={{ fontSize: 18, color: '#94A3B8', fontFamily: 'Inter, sans-serif', lineHeight: 1.7 }}>
+                    <p className="text-[13px] text-gray-400 font-sans leading-relaxed">
                       {desc}
                     </p>
                   </div>

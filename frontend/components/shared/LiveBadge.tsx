@@ -33,22 +33,25 @@ export function StatusBadge({
   status: 'live' | 'upcoming' | 'finished'
   minute?: number | null
 }) {
-  if (status === 'live') return <LiveBadge />
+  if (status === 'live') {
+    return (
+      <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-[4px] bg-red-500/10 border border-red-500/20">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-pulse" />
+        <span className="font-mono text-[11px] font-semibold tracking-wider text-[#EF4444]">
+          {minute ? `${minute}'` : 'LIVE'}
+        </span>
+      </div>
+    )
+  }
   if (status === 'finished') {
     return (
-      <span
-        className="font-mono text-[11px] tracking-widest px-1.5 py-0.5 rounded-[2px]"
-        style={{ background: 'rgba(148,163,184,0.1)', color: '#94A3B8' }}
-      >
-        FT
+      <span className="inline-flex items-center gap-1 font-mono text-[11px] tracking-wider px-2 py-0.5 rounded-[4px] bg-emerald-500/10 border border-emerald-500/20 text-[#00FF87] font-medium">
+        <span>✓</span> FT
       </span>
     )
   }
   return (
-    <span
-      className="font-mono text-[11px] tracking-widest px-1.5 py-0.5 rounded-[2px]"
-      style={{ background: 'rgba(124,58,237,0.1)', color: '#7C3AED' }}
-    >
+    <span className="inline-flex items-center font-mono text-[11px] tracking-wider px-2 py-0.5 rounded-[4px] bg-white/[0.06] border border-white/[0.08] text-[#94A3B8] font-medium">
       UPCOMING
     </span>
   )

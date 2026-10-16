@@ -140,7 +140,7 @@ export default function WarRoomPage() {
   }
 
   return (
-    <div className="flex flex-col" style={{ height: '100vh', background: '#050508', overflow: 'hidden' }}>
+    <div className="flex flex-col h-screen max-h-screen overflow-hidden pb-20 md:pb-24" style={{ background: '#050508' }}>
       {/* Top bar */}
       <MatchHeader match={currentMatch} prediction={prediction} isLoading={isLoading && !currentMatch} />
 
@@ -165,7 +165,7 @@ export default function WarRoomPage() {
           />
         </div>
 
-        {/* Center panel — flex */}
+        {/* Center panel — flex pitch */}
         <div className="flex-1 flex flex-col p-4 overflow-hidden" style={{ minWidth: 0 }}>
           <PitchVisualization
             lineups={lineups}

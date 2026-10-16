@@ -43,30 +43,30 @@ export function StatsPanel({ stats, prediction, momentumHistory, currentMinute, 
             </span>
           )}
         </div>
-        <div className="flex justify-between items-end gap-1">
+        <div className="flex justify-between items-end gap-2">
           {[
-            { label: 'HOME', value: homeWin, color: '#00FF87' },
-            { label: 'DRAW', value: draw, color: '#F59E0B' },
-            { label: 'AWAY', value: awayWin, color: '#E8003D' },
+            { label: 'HOME', value: homeWin, color: '#38BDF8' },
+            { label: 'DRAW', value: draw, color: '#64748B' },
+            { label: 'AWAY', value: awayWin, color: '#F43F5E' },
           ].map(({ label, value, color }) => (
             <div key={label} className="flex-1 flex flex-col items-center">
               {isLoading || value === null ? (
                 <Skeleton width={48} height={36} className="mb-1" />
               ) : (
-                <span className="font-mono font-semibold" style={{ fontSize: 28, color, lineHeight: 1 }}>
-                  {value}<span style={{ fontSize: 14, opacity: 0.7 }}>%</span>
+                <span className="font-mono font-semibold" style={{ fontSize: 26, color, lineHeight: 1 }}>
+                  {value}<span style={{ fontSize: 13, opacity: 0.7 }}>%</span>
                 </span>
               )}
-              <span className="font-mono text-[10px] tracking-wider mt-1" style={{ color: '#6B7280' }}>{label}</span>
-              <div className="w-full h-1 mt-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+              <span className="font-mono text-[11px] font-medium tracking-wider mt-1" style={{ color: '#94A3B8' }}>{label}</span>
+              <div className="w-full h-1.5 mt-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
                 <div className="h-full rounded-full transition-all duration-700" style={{ width: `${value ?? 0}%`, background: color }} />
               </div>
             </div>
           ))}
         </div>
         {prediction && (
-          <div className="mt-3 font-mono text-[10px] tracking-wider" style={{ color: '#6B7280' }}>
-            ELO {Math.round(prediction.home_elo)} vs {Math.round(prediction.away_elo)}
+          <div className="mt-3 font-mono text-[11px] tracking-wider text-center" style={{ color: '#6B7280' }}>
+            ELO DIFFERENTIAL: {Math.round(prediction.home_elo)} vs {Math.round(prediction.away_elo)}
           </div>
         )}
       </div>
@@ -83,11 +83,11 @@ export function StatsPanel({ stats, prediction, momentumHistory, currentMinute, 
             </>
           ) : (
             <>
-              <span className="font-mono font-semibold" style={{ fontSize: 28, color: '#00FF87' }}>
+              <span className="font-mono font-bold" style={{ fontSize: 28, color: '#38BDF8' }}>
                 {xgHome !== null ? xgHome.toFixed(2) : '—'}
               </span>
-              <span className="font-mono text-[11px]" style={{ color: '#6B7280' }}>xG</span>
-              <span className="font-mono font-semibold" style={{ fontSize: 28, color: '#E8003D' }}>
+              <span className="font-mono text-[12px] font-semibold px-2 py-0.5 rounded-[4px]" style={{ background: 'rgba(255,255,255,0.04)', color: '#94A3B8' }}>xG</span>
+              <span className="font-mono font-bold" style={{ fontSize: 28, color: '#F43F5E' }}>
                 {xgAway !== null ? xgAway.toFixed(2) : '—'}
               </span>
             </>
@@ -137,12 +137,12 @@ export function StatsPanel({ stats, prediction, momentumHistory, currentMinute, 
               <AreaChart data={momentumHistory} margin={{ top: 4, right: 4, bottom: 0, left: -24 }}>
                 <defs>
                   <linearGradient id="homeGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#00FF87" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#00FF87" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#38BDF8" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#38BDF8" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="minute" tick={{ fontFamily: 'IBM Plex Mono', fontSize: 9, fill: '#6B7280' }} />
-                <YAxis domain={[0, 100]} tick={{ fontFamily: 'IBM Plex Mono', fontSize: 9, fill: '#6B7280' }} />
+                <XAxis dataKey="minute" tick={{ fontFamily: 'IBM Plex Mono', fontSize: 10, fill: '#6B7280' }} />
+                <YAxis domain={[0, 100]} tick={{ fontFamily: 'IBM Plex Mono', fontSize: 10, fill: '#6B7280' }} />
                 <Tooltip
                   contentStyle={{ background: '#0F1117', border: '1px solid rgba(255,255,255,0.08)', fontFamily: 'IBM Plex Mono', fontSize: 11 }}
                   labelStyle={{ color: '#94A3B8' }}
@@ -150,8 +150,8 @@ export function StatsPanel({ stats, prediction, momentumHistory, currentMinute, 
                 {currentMinute && (
                   <ReferenceLine x={currentMinute} stroke="#94A3B8" strokeDasharray="3 3" strokeOpacity={0.5} />
                 )}
-                <Area type="monotone" dataKey="home" stroke="#00FF87" fill="url(#homeGrad)" strokeWidth={1.5} dot={false} />
-                <Area type="monotone" dataKey="away" stroke="#E8003D" fill="none" strokeWidth={1} strokeDasharray="3 3" dot={false} />
+                <Area type="monotone" dataKey="home" stroke="#38BDF8" fill="url(#homeGrad)" strokeWidth={1.5} dot={false} />
+                <Area type="monotone" dataKey="away" stroke="#F43F5E" fill="none" strokeWidth={1} strokeDasharray="3 3" dot={false} />
               </AreaChart>
             </ResponsiveContainer>
           )}

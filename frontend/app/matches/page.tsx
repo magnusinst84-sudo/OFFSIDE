@@ -7,6 +7,9 @@ import { MatchCard, MatchCardSkeleton } from '@/components/match-explorer/MatchC
 import type { Match } from '@/lib/types'
 
 
+import { PageShell, PageHeader } from '@/components/shared/PageShell'
+import { SegmentedTabs, FallbackBadge } from '@/components/shared/Primitives'
+
 const TABS = [
   { id: 'live' as const, label: 'LIVE' },
   { id: 'upcoming' as const, label: 'UPCOMING' },
@@ -26,7 +29,7 @@ function MatchGrid({ tab }: { tab: 'live' | 'upcoming' | 'finished' }) {
 
   if (isLoading) {
     return (
-      <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))' }}>
+      <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))' }}>
         {Array.from({ length: 6 }).map((_, i) => <MatchCardSkeleton key={i} />)}
       </div>
     )
@@ -34,25 +37,27 @@ function MatchGrid({ tab }: { tab: 'live' | 'upcoming' | 'finished' }) {
 
   if (!matches.length) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 gap-3">
-        <span className="font-mono text-[11px] tracking-widest" style={{ color: '#6B7280' }}>
-          NO {tab.toUpperCase()} MATCHES
+      <div className="flex flex-col items-center justify-center py-20 px-4 rounded-[6px] border border-white/[0.06] bg-[#0F1117] gap-3">
+        <span className="font-mono text-[12px] font-semibold tracking-widest text-[#00FF87]">
+          NO {tab.toUpperCase()} MATCHES IN PROGRESS
         </span>
-        <span className="text-[13px]" style={{ color: '#6B7280', fontFamily: 'Inter, sans-serif' }}>
-          {tab === 'live' ? 'No matches currently in play.' : `No ${tab} fixtures available.`}
+        <span className="text-[13px] text-[#94A3B8] font-normal text-center max-w-md">
+          {tab === 'live'
+            ? 'No matches are currently active in top European competitions.'
+            : `No ${tab} fixtures found for premier European competitions.`}
         </span>
       </div>
     )
   }
 
   return (
-    <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))' }}>
+    <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))' }}>
       {matches.map((match: Match) => (
         <motion.div
           key={match.id}
-          initial={{ opacity: 0, y: 8 }}
+          initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: 0.2 }}
         >
           <MatchWithPrediction match={match} />
         </motion.div>
@@ -69,58 +74,31 @@ function MatchesContent() {
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: '#050508' }}>
-      {/* Page header */}
-      <div className="px-8 pt-8 pb-6" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <div className="flex items-end justify-between">
-          <div>
-            <p className="font-mono text-[10px] tracking-widest mb-1" style={{ color: '#00FF87' }}>UCL • UEL • PREMIER LEAGUE • LA LIGA • BUNDESLIGA • SERIE A • LIGUE 1</p>
-            <h1 style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: 28, fontWeight: 700, color: '#F0F4F8' }}>
-              Match Explorer
-            </h1>
-          </div>
-          <p className="font-mono text-[11px]" style={{ color: '#6B7280' }}>
-            Live European Intelligence
-          </p>
-        </div>
-      </div>
-
-      {/* Tab bar */}
-      <div className="px-8 pt-4 pb-0 flex items-center gap-1">
-        {TABS.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className="relative px-4 py-2 font-mono text-[11px] tracking-widest transition-all duration-150"
-            style={{
-              color: activeTab === tab.id ? '#00FF87' : '#6B7280',
-            }}
-          >
-            {tab.label}
-            {activeTab === tab.id && (
-              <motion.div
-                layoutId="tabIndicator"
-                className="absolute bottom-0 left-0 right-0 h-px"
-                style={{ background: '#00FF87' }}
-                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-              />
-            )}
-          </button>
-        ))}
-        <div className="flex-1" style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
-      </div>
+    <PageShell>
+      <PageHeader
+        eyebrow="UCL • UEL • PREMIER LEAGUE • LA LIGA • BUNDESLIGA • SERIE A • LIGUE 1"
+        title="Match Explorer"
+        subtitle="Real-time European football intelligence with live probability distributions and momentum analysis."
+        action={
+          <SegmentedTabs
+            tabs={TABS}
+            active={activeTab}
+            onChange={setActiveTab}
+          />
+        }
+      />
 
       {/* Match grid */}
-      <div className="px-8 py-6">
+      <div className="mt-2">
         <MatchGrid tab={activeTab} />
       </div>
-    </div>
+    </PageShell>
   )
 }
 
 export default function MatchesPage() {
   return (
-    <Suspense fallback={<div style={{ background: '#050508', minHeight: '100vh' }} />}>
+    <Suspense fallback={<div className="min-h-screen bg-[#050508]" />}>
       <MatchesContent />
     </Suspense>
   )
