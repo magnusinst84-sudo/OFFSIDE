@@ -197,7 +197,7 @@ export default function LandingPage() {
   }, [])
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden" style={{ background: '#050508' }}>
+    <div className="relative min-h-screen w-full overflow-x-hidden" style={{ background: '#050508' }}>
       {/* Pitch background — visible from scene 2 */}
       <AnimatePresence>
         {scene >= 2 && (
@@ -205,7 +205,7 @@ export default function LandingPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1.5 }}
-            className="absolute inset-0"
+            className="absolute inset-0 w-full h-full"
           >
             <PitchBackground />
           </motion.div>
@@ -219,9 +219,9 @@ export default function LandingPage() {
             initial={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
-            className="absolute inset-0 flex items-center justify-center"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-[#050508]"
           >
-            <div className="flex flex-col gap-3" style={{ minWidth: 440 }}>
+            <div className="flex flex-col gap-3 px-6" style={{ minWidth: 440, maxWidth: '90vw' }}>
               {lines.map((line, i) => (
                 <motion.div
                   key={i}
