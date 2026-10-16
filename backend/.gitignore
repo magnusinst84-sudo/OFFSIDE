@@ -1,0 +1,16 @@
+# API Keys & Secrets
+.env
+.env.local
+.env.development
+.env.production
+.env.*
+
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+
+# Build outputs
+.next/
+build/
+dist/
