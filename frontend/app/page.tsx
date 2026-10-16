@@ -219,19 +219,19 @@ export default function LandingPage() {
             initial={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-[#050508]"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-[#050508] p-4"
           >
-            <div className="flex flex-col gap-3 px-6" style={{ minWidth: 440, maxWidth: '90vw' }}>
+            <div className="flex flex-col gap-2.5 sm:gap-3 w-full max-w-[440px]">
               {lines.map((line, i) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: i <= currentLine ? 1 : 0.1, x: 0 }}
                   transition={{ delay: i * 0.05, duration: 0.2 }}
-                  className="flex items-center gap-3 font-mono text-[13px]"
+                  className="flex items-center gap-2.5 sm:gap-3 font-mono text-[11px] sm:text-[13px] truncate"
                 >
                   {/* Status indicator */}
-                  <span style={{ width: 8 }}>
+                  <span className="flex-shrink-0" style={{ width: 8 }}>
                     {line.status === 'loading' && (
                       <span style={{ color: '#F59E0B', animation: 'terminalBlink 0.8s infinite' }}>▋</span>
                     )}
@@ -239,7 +239,7 @@ export default function LandingPage() {
                     {line.status === 'offline' && <span style={{ color: '#E8003D' }}>●</span>}
                     {line.status === 'pending' && <span style={{ color: '#1A1D27' }}>○</span>}
                   </span>
-                  <span style={{ color: line.status === 'online' ? '#00FF87' : line.status === 'offline' ? '#94A3B8' : line.status === 'loading' ? '#F0F4F8' : '#1A1D27' }}>
+                  <span className="truncate" style={{ color: line.status === 'online' ? '#00FF87' : line.status === 'offline' ? '#94A3B8' : line.status === 'loading' ? '#F0F4F8' : '#1A1D27' }}>
                     {line.text}
                     {line.status === 'offline' && <span style={{ color: '#6B7280' }}> (offline)</span>}
                   </span>
@@ -260,10 +260,10 @@ export default function LandingPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8 }}
-            className="relative min-h-screen flex flex-col"
+            className="relative min-h-screen flex flex-col w-full"
           >
             {/* Hero section */}
-            <div className="flex-1 flex flex-col items-center justify-center text-center px-4 sm:px-8 pt-20 pb-12">
+            <div className="flex-1 flex flex-col items-center justify-center text-center px-4 sm:px-8 pt-16 sm:pt-20 pb-12 w-full">
               {/* Label */}
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
@@ -272,7 +272,7 @@ export default function LandingPage() {
                 className="flex items-center gap-2 mb-4"
               >
                 <div style={{ width: 24, height: 1, background: '#00FF87' }} />
-                <span className="font-mono text-[11px] tracking-widest text-[#00FF87]">GLOBAL FOOTBALL // AI INTELLIGENCE</span>
+                <span className="font-mono text-[10px] sm:text-[11px] tracking-widest text-[#00FF87]">GLOBAL FOOTBALL // AI INTELLIGENCE</span>
                 <div style={{ width: 24, height: 1, background: '#00FF87' }} />
               </motion.div>
 
@@ -283,7 +283,7 @@ export default function LandingPage() {
                 transition={{ delay: 0.35, duration: 0.6 }}
                 style={{
                   fontFamily: 'Space Grotesk, sans-serif',
-                  fontSize: 'clamp(36px, 5.5vw, 72px)',
+                  fontSize: 'clamp(32px, 5.5vw, 72px)',
                   fontWeight: 700,
                   lineHeight: 1.1,
                   color: '#F0F4F8',
@@ -301,7 +301,7 @@ export default function LandingPage() {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
-                className="text-[16px] md:text-[18px] text-gray-400 max-w-[540px] leading-relaxed mb-8"
+                className="text-[14px] sm:text-[16px] md:text-[18px] text-gray-400 max-w-[540px] leading-relaxed mb-8 px-2"
                 style={{ fontFamily: 'Inter, sans-serif' }}
               >
                 AI-powered tactical analysis, win probability, momentum tracking and player DNA scoring — built for modern elite football.
@@ -312,32 +312,32 @@ export default function LandingPage() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.65, duration: 0.5 }}
-                className="flex flex-col sm:flex-row items-center gap-4 relative z-20 mb-12"
+                className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 relative z-20 mb-10 w-full sm:w-auto px-4"
               >
                 {/* Primary Tactical Trigger */}
                 <button
                   onClick={() => router.push('/matches')}
-                  className="group relative flex items-center justify-center gap-3 px-8 py-3.5 rounded-[6px] border border-[#00FF87] bg-[#050508] transition-all duration-200 hover:scale-[1.02] shadow-[0_0_20px_rgba(0,255,135,0.2)] cursor-pointer"
+                  className="w-full sm:w-auto group relative flex items-center justify-center gap-3 px-7 py-3 rounded-[6px] border border-[#00FF87] bg-[#050508] transition-all duration-200 hover:scale-[1.02] shadow-[0_0_20px_rgba(0,255,135,0.2)] cursor-pointer"
                 >
-                  <span className="font-mono text-[14px] font-bold tracking-wider text-white">ENTER WAR ROOM</span>
+                  <span className="font-mono text-[13px] sm:text-[14px] font-bold tracking-wider text-white">ENTER WAR ROOM</span>
                   <ChevronRight size={18} strokeWidth={2.5} className="text-[#00FF87] group-hover:translate-x-1 transition-transform" />
                 </button>
 
                 {/* Secondary Console Button */}
                 <button
                   onClick={() => router.push('/matches?tab=live')}
-                  className="group relative flex items-center justify-center px-7 py-3.5 rounded-[6px] border border-white/15 bg-[#0F1117]/80 backdrop-blur-md transition-all duration-200 hover:scale-[1.02] hover:border-white/30 cursor-pointer"
+                  className="w-full sm:w-auto group relative flex items-center justify-center px-6 py-3 rounded-[6px] border border-white/15 bg-[#0F1117]/80 backdrop-blur-md transition-all duration-200 hover:scale-[1.02] hover:border-white/30 cursor-pointer"
                 >
-                  <span className="font-mono text-[14px] font-medium tracking-wider text-gray-200">EXPLORE MATCHES</span>
+                  <span className="font-mono text-[13px] sm:text-[14px] font-medium tracking-wider text-gray-200">EXPLORE MATCHES</span>
                 </button>
               </motion.div>
 
-              {/* Real stats strip */}
+              {/* Real stats strip — 2x2 grid on mobile, row on desktop */}
               <motion.div
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.85 }}
-                className="flex flex-wrap items-center justify-center gap-8 md:gap-14 py-4 px-6 rounded-[8px] bg-[#0F1117]/50 border border-white/5 backdrop-blur-sm"
+                className="grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-center gap-6 sm:gap-8 md:gap-14 py-4 px-6 rounded-[8px] bg-[#0F1117]/50 border border-white/5 backdrop-blur-sm w-full max-w-2xl"
               >
                 {[
                   { value: accuracy ? `${accuracy.toFixed(1)}%` : '57.6%', label: 'MODEL ACCURACY' },
@@ -346,10 +346,10 @@ export default function LandingPage() {
                   { value: '44%', label: 'ELO IMPORTANCE' },
                 ].map(({ value, label }) => (
                   <div key={label} className="flex flex-col items-center">
-                    <span className="font-mono font-bold text-[26px] md:text-[30px] text-white leading-none">
+                    <span className="font-mono font-bold text-[22px] sm:text-[26px] md:text-[30px] text-white leading-none">
                       {value}
                     </span>
-                    <span className="font-mono text-[10px] tracking-widest mt-1.5 text-gray-500">
+                    <span className="font-mono text-[9px] sm:text-[10px] tracking-widest mt-1.5 text-gray-500 text-center">
                       {label}
                     </span>
                   </div>
@@ -363,42 +363,42 @@ export default function LandingPage() {
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 1.0, duration: 0.6 }}
-                className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl"
+                className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-6 w-full max-w-6xl px-2 sm:px-0"
               >
                 {[
                   {
-                    icon: <Zap size={28} className="text-[#00FF87]" />,
+                    icon: <Zap className="w-5 h-5 md:w-7 md:h-7 text-[#00FF87]" />,
                     title: 'Momentum Engine',
                     desc: 'Real-time momentum scoring computed dynamically from shot quality, possession swings, and rolling xG deltas.',
                   },
                   {
-                    icon: <Dna size={28} className="text-[#38BDF8]" />,
+                    icon: <Dna className="w-5 h-5 md:w-7 md:h-7 text-[#38BDF8]" />,
                     title: 'Player DNA Fingerprint',
                     desc: 'Comprehensive scouting radar across 6 tactical attributes, with archetype similarity benchmarks and role fit indices.',
                   },
                   {
-                    icon: <Bot size={28} className="text-[#7C3AED]" />,
+                    icon: <Bot className="w-5 h-5 md:w-7 md:h-7 text-[#7C3AED]" />,
                     title: 'AI Tactical Command',
                     desc: '4 distinct analyst personalities (Broadcast, Tactical, Coach, Fan) streaming live commentary and match intelligence.',
                   },
                 ].map(({ icon, title, desc }) => (
                   <div
                     key={title}
-                    className="p-8 rounded-[12px] flex flex-col gap-4 transition-all duration-300 hover:-translate-y-1"
+                    className="p-4 sm:p-6 md:p-8 rounded-[8px] sm:rounded-[12px] flex flex-row md:flex-col items-start gap-3.5 md:gap-4 transition-all duration-300 hover:-translate-y-1"
                     style={{
                       background: 'rgba(15, 17, 23, 0.75)',
                       backdropFilter: 'blur(20px)',
                       border: '1px solid rgba(255,255,255,0.08)',
                     }}
                   >
-                    <div className="w-12 h-12 rounded-[8px] bg-white/5 border border-white/10 flex items-center justify-center">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-[6px] md:rounded-[8px] bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
                       {icon}
                     </div>
-                    <div>
-                      <h3 className="text-[20px] font-bold text-white mb-2" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-[15px] sm:text-[17px] md:text-[20px] font-bold text-white mb-1 md:mb-2 leading-tight" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
                         {title}
                       </h3>
-                      <p className="text-[13px] text-gray-400 font-sans leading-relaxed">
+                      <p className="text-[11px] sm:text-[12px] md:text-[13px] text-gray-400 font-sans leading-relaxed">
                         {desc}
                       </p>
                     </div>
