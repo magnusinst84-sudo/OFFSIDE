@@ -44,9 +44,24 @@ export default function PlayersPage() {
     return () => { mounted = false }
   }, [])
 
+  // Top European Clubs & Elite Tournament squads in scope
+  const TOP_CLUBS_AND_NATIONS = [
+    'Real Madrid', 'Manchester City', 'Arsenal', 'Liverpool', 'Bayern Munich',
+    'Barcelona', 'Paris Saint-Germain', 'PSG', 'Chelsea', 'Tottenham', 'Inter',
+    'Juventus', 'AC Milan', 'Atletico Madrid', 'Bayer Leverkusen', 'Borussia Dortmund',
+    'Aston Villa', 'Newcastle', 'Sporting CP', 'Benfica', 'Porto', 'RB Leipzig',
+    'France', 'Germany', 'Spain', 'England', 'Brazil', 'Argentina', 'Portugal',
+    'Netherlands', 'Belgium', 'Italy', 'Croatia', 'Uruguay', 'Norway'
+  ]
+
   const filteredPlayers = useMemo(() => {
     return players
       .filter(p => {
+        // Scope verification: only players belonging to top European clubs or national teams
+        const clubOrTeam = `${p.club || ''} ${p.team || ''}`
+        const inScope = TOP_CLUBS_AND_NATIONS.some(c => clubOrTeam.toLowerCase().includes(c.toLowerCase()))
+        if (!inScope && players.length > 30) return false
+
         const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           p.team?.toLowerCase().includes(searchQuery.toLowerCase()) ||
           p.club?.toLowerCase().includes(searchQuery.toLowerCase())

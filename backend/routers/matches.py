@@ -301,31 +301,47 @@ def is_top_flight(f: dict) -> bool:
     country = (league.get("country") or "").lower()
     lname = (league.get("name") or "").lower()
 
-    # English Premier League and domestic cups only
+    # STRICT EXCLUSIONS: Youth, U21/U23/U19, Reserves, CAF/Africa, Women, Friendly
+    EXCLUDE_KEYWORDS = [
+        "u21", "u23", "u19", "u20", "u18", "u17", "youth", "reserve", "reserves",
+        "caf", "africa", "afcon", "women", "feminin", "friendly", "amateur"
+    ]
+    if any(k in lname for k in EXCLUDE_KEYWORDS):
+        return False
+
+    # English Premier League and top domestic cups only (exclude Premier League 2 / Development)
     if country in ("england", "united kingdom"):
-        if any(k in lname for k in ["premier league", "fa cup", "efl cup", "carabao"]):
+        if "premier league 2" in lname or "development" in lname:
+            return False
+        if any(k in lname for k in ["premier league", "fa cup", "efl cup", "carabao cup"]):
             return True
 
-    # UEFA competitions only
-    if country in ("world", "europe"):
-        if any(k in lname for k in ["uefa champions league", "champions league", "europa league", "conference league"]):
+    # UEFA Elite competitions only (Champions League, Europa League, Conference League)
+    if country in ("world", "europe") or "uefa" in lname:
+        if any(k in lname for k in ["uefa champions league", "champions league", "uefa europa league", "europa league", "conference league"]):
+            # Double check it is not CAF, AFC, or youth
+            if not any(k in lname for k in ["caf", "afc", "concacaf", "ofc", "youth"]):
+                return True
+
+    # Spain (La Liga & Copa del Rey only - exclude 2a division/RFEF)
+    if country == "spain":
+        if any(k in lname for k in ["la liga", "primera división", "copa del rey"]) and "2" not in lname and "hyper" not in lname:
             return True
 
-    # Spain (La Liga)
-    if country == "spain" and any(k in lname for k in ["la liga", "primera división", "copa del rey"]):
-        return True
+    # Germany (Bundesliga & DFB-Pokal - exclude 2. Bundesliga)
+    if country == "germany":
+        if ("bundesliga" in lname and "2" not in lname) or "dfb-pokal" in lname or "dfb pokal" in lname:
+            return True
 
-    # Germany (Bundesliga)
-    if country == "germany" and any(k in lname for k in ["bundesliga", "dfb-pokal", "dfb pokal"]):
-        return True
+    # Italy (Serie A & Coppa Italia only)
+    if country == "italy":
+        if ("serie a" in lname and "femminile" not in lname) or "coppa italia" in lname:
+            return True
 
-    # Italy (Serie A)
-    if country == "italy" and any(k in lname for k in ["serie a", "coppa italia"]):
-        return True
-
-    # France (Ligue 1)
-    if country == "france" and any(k in lname for k in ["ligue 1", "coupe de france"]):
-        return True
+    # France (Ligue 1 & Coupe de France only)
+    if country == "france":
+        if ("ligue 1" in lname and "2" not in lname) or "coupe de france" in lname:
+            return True
 
     return False
 
