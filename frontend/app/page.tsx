@@ -3,7 +3,8 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { checkHealth, getInsights, getTeams } from '@/lib/api'
-import { ChevronRight, Zap, Dna, Bot } from 'lucide-react'
+import { ChevronRight, Zap, Dna, Bot, Lock } from 'lucide-react'
+import { useAuth } from '@/context/AuthContext'
 
 interface BootLine {
   text: string
@@ -111,12 +112,21 @@ function PitchBackground() {
 
 export default function LandingPage() {
   const router = useRouter()
+  const { user, openAuthModal } = useAuth()
   const [scene, setScene] = useState<1 | 2 | 3>(1)
   const [lines, setLines] = useState<BootLine[]>(BOOT_SEQUENCE)
   const [currentLine, setCurrentLine] = useState(0)
   const [accuracy, setAccuracy] = useState<number | null>(null)
   const [teamCount, setTeamCount] = useState<number | null>(null)
   const [matchCount, setMatchCount] = useState<number | null>(null)
+
+  const handleProtectedNavigate = (path: string) => {
+    if (!user) {
+      openAuthModal()
+      return
+    }
+    router.push(path)
+  }
 
   useEffect(() => {
     const runBoot = async () => {
@@ -316,19 +326,24 @@ export default function LandingPage() {
               >
                 {/* Primary Tactical Trigger */}
                 <button
-                  onClick={() => router.push('/matches')}
+                  onClick={() => handleProtectedNavigate('/matches')}
                   className="w-full sm:w-auto group relative flex items-center justify-center gap-3 px-7 py-3 rounded-[6px] border border-[#00FF87] bg-[#050508] transition-all duration-200 hover:scale-[1.02] shadow-[0_0_20px_rgba(0,255,135,0.2)] cursor-pointer"
                 >
-                  <span className="font-mono text-[13px] sm:text-[14px] font-bold tracking-wider text-white">ENTER WAR ROOM</span>
+                  {!user && <Lock size={15} className="text-[#00FF87]" />}
+                  <span className="font-mono text-[13px] sm:text-[14px] font-bold tracking-wider text-white">
+                    {user ? 'ENTER WAR ROOM' : 'AUTHENTICATE & ENTER'}
+                  </span>
                   <ChevronRight size={18} strokeWidth={2.5} className="text-[#00FF87] group-hover:translate-x-1 transition-transform" />
                 </button>
 
                 {/* Secondary Console Button */}
                 <button
-                  onClick={() => router.push('/matches?tab=live')}
+                  onClick={() => handleProtectedNavigate('/matches?tab=live')}
                   className="w-full sm:w-auto group relative flex items-center justify-center px-6 py-3 rounded-[6px] border border-white/15 bg-[#0F1117]/80 backdrop-blur-md transition-all duration-200 hover:scale-[1.02] hover:border-white/30 cursor-pointer"
                 >
-                  <span className="font-mono text-[13px] sm:text-[14px] font-medium tracking-wider text-gray-200">EXPLORE MATCHES</span>
+                  <span className="font-mono text-[13px] sm:text-[14px] font-medium tracking-wider text-gray-200">
+                    {user ? 'EXPLORE MATCHES' : 'SIGN IN / REGISTER'}
+                  </span>
                 </button>
               </motion.div>
 

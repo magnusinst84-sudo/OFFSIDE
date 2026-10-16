@@ -43,6 +43,10 @@ export function CommandConsole() {
       openSettings()
       return
     }
+    if (!user && item.href !== '/') {
+      openAuthModal()
+      return
+    }
     router.push(item.href)
   }
 
