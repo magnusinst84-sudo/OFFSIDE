@@ -139,34 +139,62 @@ export default function WarRoomPage() {
     } catch {}
   }
 
+  const [mobileTab, setMobileTab] = useState<'pitch' | 'stats' | 'ai'>('pitch')
+
   return (
-    <div className="flex flex-col h-screen max-h-screen overflow-hidden pb-20 md:pb-24" style={{ background: '#050508' }}>
+    <div className="flex flex-col h-screen max-h-screen overflow-hidden pb-20 md:pb-24 w-full" style={{ background: '#050508' }}>
       {/* Top bar */}
       <MatchHeader match={currentMatch} prediction={prediction} isLoading={isLoading && !currentMatch} />
 
-      {/* Three-column layout */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left panel — 280px */}
+      {/* Mobile view selector (hidden on lg+) */}
+      <div className="flex lg:hidden items-center justify-center gap-2 p-2 border-b border-white/[0.06] bg-[#0F1117] flex-shrink-0">
+        {(['pitch', 'stats', 'ai'] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => setMobileTab(tab)}
+            className={`font-mono text-[11px] font-semibold tracking-wider px-3.5 py-1.5 rounded transition-all ${
+              mobileTab === tab
+                ? 'bg-[#00FF87]/15 text-[#00FF87] border border-[#00FF87]/30'
+                : 'text-[#94A3B8] hover:text-white bg-transparent border border-transparent'
+            }`}
+          >
+            {tab.toUpperCase()}
+          </button>
+        ))}
+      </div>
+
+      {/* Main layout: Desktop 3-column, Mobile tabbed */}
+      <div className="flex flex-1 overflow-hidden min-h-0">
+        {/* Left panel — stats (always on lg, conditional on mobile) */}
         <div
-          className="flex-shrink-0 overflow-y-auto"
+          className={`flex-shrink-0 overflow-y-auto ${
+            mobileTab === 'stats' ? 'flex flex-col w-full' : 'hidden lg:flex lg:flex-col'
+          }`}
           style={{
-            width: 280,
+            width: undefined,
+            minWidth: undefined,
             borderRight: '1px solid rgba(255,255,255,0.06)',
             scrollbarWidth: 'thin',
             scrollbarColor: '#1A1D27 transparent',
           }}
         >
-          <StatsPanel
-            stats={stats}
-            prediction={prediction}
-            momentumHistory={momentumHistory}
-            currentMinute={currentMatch?.minute ?? undefined}
-            isLoading={isLoading}
-          />
+          <div className="lg:w-[280px] w-full">
+            <StatsPanel
+              stats={stats}
+              prediction={prediction}
+              momentumHistory={momentumHistory}
+              currentMinute={currentMatch?.minute ?? undefined}
+              isLoading={isLoading}
+            />
+          </div>
         </div>
 
-        {/* Center panel — flex pitch */}
-        <div className="flex-1 flex flex-col p-4 overflow-hidden" style={{ minWidth: 0 }}>
+        {/* Center panel — pitch (always on lg, conditional on mobile) */}
+        <div
+          className={`flex-1 flex flex-col p-2 sm:p-4 overflow-hidden min-w-0 ${
+            mobileTab === 'pitch' ? 'flex' : 'hidden lg:flex'
+          }`}
+        >
           <PitchVisualization
             lineups={lineups}
             events={events}
@@ -174,17 +202,21 @@ export default function WarRoomPage() {
           />
         </div>
 
-        {/* Right panel — 320px */}
+        {/* Right panel — AI commentary (always on lg, conditional on mobile) */}
         <div
-          className="flex-shrink-0 p-3 overflow-hidden"
-          style={{ width: 320, borderLeft: '1px solid rgba(255,255,255,0.06)' }}
+          className={`flex-shrink-0 p-2 sm:p-3 overflow-hidden ${
+            mobileTab === 'ai' ? 'flex flex-col w-full' : 'hidden lg:flex lg:flex-col'
+          }`}
+          style={{ borderLeft: '1px solid rgba(255,255,255,0.06)' }}
         >
-          <AIPanel
-            commentary={commentary}
-            isLoading={commentaryLoading}
-            personality={personality}
-            onPersonalityChange={handlePersonalityChange}
-          />
+          <div className="lg:w-[320px] w-full h-full">
+            <AIPanel
+              commentary={commentary}
+              isLoading={commentaryLoading}
+              personality={personality}
+              onPersonalityChange={handlePersonalityChange}
+            />
+          </div>
         </div>
       </div>
     </div>

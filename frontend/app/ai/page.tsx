@@ -129,56 +129,62 @@ export default function AITacticalCenter() {
     }}>
 
       {/* ── Top bar ── */}
-      <div style={{
-        flexShrink: 0,
-        padding: '20px 32px 16px',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-      }}>
+      <div className="flex-shrink-0 px-4 sm:px-8 py-3 sm:py-4 border-b border-white/[0.06] flex items-center justify-between gap-3">
         <div>
-          <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, letterSpacing: '0.15em', color: '#6B7280', marginBottom: 4 }}>
+          <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, letterSpacing: '0.15em', color: '#6B7280', marginBottom: 2 }}>
             AI TACTICAL CENTER
           </p>
-          <h1 style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: 22, fontWeight: 700, color: '#F0F4F8', margin: 0 }}>
+          <h1 className="text-lg sm:text-[22px] font-bold text-[#F0F4F8] m-0" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
             Analyst Consultation
           </h1>
         </div>
         {/* Active analyst badge */}
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          padding: '8px 16px',
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '6px 12px',
           borderRadius: 4,
           background: activeConfig.accent,
           border: `1px solid ${activeConfig.border}`,
         }}>
           <Waveform isActive={isThinking} personality={personality} />
-          <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, fontWeight: 600, color: activeConfig.color }}>
+          <span className="text-[11px] font-semibold" style={{ fontFamily: 'IBM Plex Mono, monospace', color: activeConfig.color }}>
             {activeConfig.label}
           </span>
           {isThinking && (
-            <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#6B7280', letterSpacing: '0.1em' }}>
+            <span className="hidden sm:inline text-[9px] text-[#6B7280] tracking-widest font-mono">
               THINKING...
             </span>
           )}
         </div>
       </div>
 
-      {/* ── Body ── */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+      {/* ── Mobile Personality Selector Strip ── */}
+      <div className="flex md:hidden items-center gap-1.5 p-2 overflow-x-auto border-b border-white/[0.06] bg-[#0F1117] flex-shrink-0">
+        {(Object.entries(PERSONALITY_CONFIG) as [PersonalityType, typeof PERSONALITY_CONFIG.tactical][]).map(([id, cfg]) => {
+          const isActive = personality === id
+          return (
+            <button
+              key={id}
+              onClick={() => handlePersonalityChange(id)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-[11px] font-mono whitespace-nowrap transition-all"
+              style={{
+                background: isActive ? cfg.accent : 'transparent',
+                color: isActive ? cfg.color : '#94A3B8',
+                border: `1px solid ${isActive ? cfg.border : 'transparent'}`,
+              }}
+            >
+              <cfg.icon size={12} color={isActive ? cfg.color : '#6B7280'} />
+              <span>{cfg.label}</span>
+            </button>
+          )
+        })}
+      </div>
 
-        {/* ── LEFT PANEL (320px) ── */}
-        <div style={{
-          width: 320,
-          flexShrink: 0,
-          borderRight: '1px solid rgba(255,255,255,0.06)',
-          display: 'flex',
-          flexDirection: 'column',
-          padding: '24px 20px',
-          gap: 24,
-          overflowY: 'auto',
-        }}>
+      {/* ── Body ── */}
+      <div className="flex-1 flex overflow-hidden min-h-0 w-full">
+
+        {/* ── LEFT PANEL (Desktop only, 320px) ── */}
+        <div className="hidden md:flex flex-col w-[300px] lg:w-[320px] flex-shrink-0 border-r border-white/[0.06] p-5 gap-5 overflow-y-auto">
 
           {/* Analyst Mode label */}
           <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, letterSpacing: '0.15em', color: '#6B7280', margin: 0 }}>
@@ -340,13 +346,7 @@ export default function AITacticalCenter() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0 }}>
 
           {/* Message feed */}
-          <div style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '24px 32px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 16,
+          <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 sm:py-6 flex flex-col gap-4" style={{
             scrollbarWidth: 'thin',
             scrollbarColor: '#1A1D27 transparent',
           }}>
@@ -354,17 +354,17 @@ export default function AITacticalCenter() {
               <div style={{
                 flex: 1, display: 'flex', flexDirection: 'column',
                 alignItems: 'center', justifyContent: 'center',
-                gap: 16, textAlign: 'center', padding: '60px 0',
+                gap: 16, textAlign: 'center', padding: '40px 0',
               }}>
                 {/* Big personality icon */}
                 <div style={{
-                  width: 72, height: 72,
+                  width: 56, height: 56,
                   borderRadius: 4,
                   background: activeConfig.accent,
                   border: `1px solid ${activeConfig.border}`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  {React.createElement(activeConfig.icon, { size: 32, color: activeConfig.color })}
+                  {React.createElement(activeConfig.icon, { size: 28, color: activeConfig.color })}
                 </div>
                 <div>
                   <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 13, letterSpacing: '0.15em', color: '#F0F4F8', margin: 0, marginBottom: 8 }}>
@@ -375,7 +375,7 @@ export default function AITacticalCenter() {
                   </p>
                 </div>
                 {/* Suggested questions as larger cards */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 8, maxWidth: 560 }}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-2 max-w-[560px] w-full px-2">
                   {QUICK_CHIPS.map((chip, i) => {
                     const text = chip(currentMatch?.home_team.name)
                     return (
@@ -419,10 +419,7 @@ export default function AITacticalCenter() {
               const msgConfig = PERSONALITY_CONFIG[msg.personality as PersonalityType] ?? activeConfig
               return (
                 <div key={msg.id} style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start' }}>
-                  <div style={{
-                    maxWidth: '72%',
-                    padding: '14px 18px',
-                    borderRadius: 4,
+                  <div className="max-w-[88%] sm:max-w-[72%] p-3.5 sm:p-4 rounded-[4px]" style={{
                     background: isUser ? '#1A1D27' : '#0F1117',
                     borderLeft: !isUser ? `2px solid ${msgConfig.color}` : undefined,
                     border: isUser ? '1px solid rgba(255,255,255,0.06)' : `1px solid rgba(255,255,255,0.04)`,
@@ -494,40 +491,17 @@ export default function AITacticalCenter() {
           </div>
 
           {/* ── Bottom: chips + input ── */}
-          <div style={{
-            flexShrink: 0,
-            borderTop: '1px solid rgba(255,255,255,0.06)',
-            padding: '12px 32px 20px',
-          }}>
+          <div className="flex-shrink-0 border-t border-white/[0.06] px-3 sm:px-8 py-3 sm:py-5 pb-20 sm:pb-24">
             {/* Quick chips — only show when conversation is active */}
             {conversation.length > 0 && (
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+              <div className="flex gap-2 overflow-x-auto pb-2 mb-2 no-scrollbar">
                 {QUICK_CHIPS.map((chip, i) => {
                   const text = chip(currentMatch?.home_team.name)
                   return (
                     <button
                       key={i}
                       onClick={() => handleSend(text)}
-                      style={{
-                        padding: '6px 14px',
-                        borderRadius: 999,
-                        background: '#1A1D27',
-                        border: '1px solid rgba(255,255,255,0.06)',
-                        color: '#94A3B8',
-                        fontFamily: 'IBM Plex Mono, monospace',
-                        fontSize: 10,
-                        cursor: 'pointer',
-                        transition: 'all 0.15s',
-                        letterSpacing: '0.03em',
-                      }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.borderColor = `${activeConfig.color}40`
-                        e.currentTarget.style.color = '#F0F4F8'
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
-                        e.currentTarget.style.color = '#94A3B8'
-                      }}
+                      className="px-3 py-1.5 rounded-full bg-[#1A1D27] border border-white/[0.06] text-[#94A3B8] font-mono text-[10px] whitespace-nowrap cursor-pointer transition-all flex-shrink-0"
                     >
                       {text}
                     </button>
@@ -537,20 +511,7 @@ export default function AITacticalCenter() {
             )}
 
             {/* Input bar */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              padding: '12px 20px',
-              borderRadius: 8,
-              backdropFilter: 'blur(8px)',
-              background: 'rgba(15,17,23,0.9)',
-              border: `1px solid rgba(255,255,255,0.08)`,
-              transition: 'border-color 0.15s',
-            }}
-              onFocusCapture={e => (e.currentTarget.style.borderColor = `${activeConfig.color}30`)}
-              onBlurCapture={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)')}
-            >
+            <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-2.5 sm:py-3 rounded-lg backdrop-blur bg-[#0F1117]/90 border border-white/[0.08]">
               <input
                 ref={inputRef}
                 type="text"
@@ -559,31 +520,18 @@ export default function AITacticalCenter() {
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSend(input)}
                 disabled={isThinking}
-                style={{
-                  flex: 1,
-                  background: 'transparent',
-                  outline: 'none',
-                  border: 'none',
-                  fontFamily: 'IBM Plex Mono, monospace',
-                  fontSize: 13,
-                  color: '#F0F4F8',
-                }}
+                className="flex-1 bg-transparent outline-none border-none font-mono text-xs sm:text-[13px] text-[#F0F4F8]"
               />
               <button
                 onClick={() => handleSend(input)}
                 disabled={isThinking || !input.trim()}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded flex items-center justify-center transition-all flex-shrink-0"
                 style={{
-                  width: 36, height: 36,
-                  borderRadius: 4,
                   background: input.trim() && !isThinking ? activeConfig.color : 'rgba(255,255,255,0.05)',
-                  border: 'none',
                   cursor: input.trim() && !isThinking ? 'pointer' : 'default',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  transition: 'all 0.15s',
-                  flexShrink: 0,
                 }}
               >
-                <Send size={15} color={input.trim() && !isThinking ? '#050508' : '#6B7280'} />
+                <Send size={14} color={input.trim() && !isThinking ? '#050508' : '#6B7280'} />
               </button>
             </div>
           </div>

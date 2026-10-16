@@ -47,9 +47,9 @@ export function CommandConsole() {
   return (
     <nav
       aria-label="Primary Navigation"
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-1 px-4"
+      className="fixed bottom-3 sm:bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-0.5 sm:gap-1 px-2 sm:px-4 max-w-[96vw] overflow-x-auto"
       style={{
-        height: 56,
+        height: 50,
         background: 'rgba(15,17,23,0.85)',
         backdropFilter: 'blur(20px)',
         border: '1px solid rgba(0,255,135,0.08)',
