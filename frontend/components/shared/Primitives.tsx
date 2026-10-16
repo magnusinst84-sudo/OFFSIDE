@@ -119,7 +119,7 @@ export function SegmentedTabs<T extends string>({
   onChange: (id: T) => void
 }) {
   return (
-    <div className="inline-flex items-center p-1 bg-[#0F1117] border border-white/[0.08] rounded-[6px] gap-1 h-9">
+    <div className="inline-flex items-center p-1 bg-[#0F1117] border border-white/[0.08] rounded-[6px] gap-1 h-10">
       {tabs.map(tab => {
         const isSelected = active === tab.id
         return (

@@ -76,18 +76,20 @@ export default function PlayersPage() {
       />
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 mb-6">
-        <div className="flex-1 max-w-md relative">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-6 w-full">
+        {/* Search input with matching 40px height */}
+        <div className="w-full md:max-w-xs lg:max-w-sm relative">
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search by player name, club, or country..."
-            className="w-full bg-[#0F1117] border border-white/10 rounded-[6px] pl-10 pr-4 py-2.5 text-[13px] font-mono text-white placeholder-gray-500 focus:outline-none focus:border-[#00FF87]/50 transition-colors"
+            placeholder="Search player, club, country..."
+            className="w-full h-10 bg-[#0F1117] border border-white/10 rounded-[6px] pl-10 pr-4 text-[12px] font-mono text-white placeholder-gray-500 focus:outline-none focus:border-[#00FF87]/50 transition-colors"
           />
         </div>
 
+        {/* Position tabs & sort dropdown with matching 40px height */}
         <div className="flex flex-wrap items-center gap-3">
           <SegmentedTabs
             tabs={POSITION_TABS}
@@ -95,12 +97,12 @@ export default function PlayersPage() {
             onChange={setActivePos}
           />
 
-          <div className="flex items-center gap-2 bg-[#0F1117] border border-white/10 rounded-[6px] px-3 py-1.5">
-            <SlidersHorizontal size={14} className="text-gray-400" />
+          <div className="flex items-center gap-2 bg-[#0F1117] border border-white/10 rounded-[6px] px-3 h-10">
+            <SlidersHorizontal size={14} className="text-gray-400 flex-shrink-0" />
             <select
               value={sortBy}
               onChange={e => setSortBy(e.target.value as any)}
-              className="bg-transparent text-[12px] font-mono text-gray-300 focus:outline-none cursor-pointer"
+              className="bg-transparent text-[11px] font-mono text-gray-300 focus:outline-none cursor-pointer pr-1"
             >
               <option value="dna" className="bg-[#0F1117] text-white">Sort: DNA Score</option>
               <option value="goals" className="bg-[#0F1117] text-white">Sort: Goals</option>

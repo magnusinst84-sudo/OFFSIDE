@@ -23,9 +23,9 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
-      <body style={{ background: '#050508', color: '#F0F4F8', fontFamily: 'Inter, sans-serif', minHeight: '100vh' }}>
+      <body style={{ background: '#050508', color: '#F0F4F8', fontFamily: 'Inter, sans-serif', minHeight: '100vh', width: '100%' }}>
         <AppProvider>
-          <div style={{ minHeight: '100vh', paddingBottom: 96 }}>
+          <div className="w-full flex flex-col items-center" style={{ minHeight: '100vh', paddingBottom: 96 }}>
             {children}
           </div>
           <CommandConsole />
