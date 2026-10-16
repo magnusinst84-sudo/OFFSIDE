@@ -263,16 +263,16 @@ export default function LandingPage() {
             className="relative min-h-screen flex flex-col"
           >
             {/* Hero section */}
-            <div className="flex-1 flex flex-col items-center justify-center text-center px-8" style={{ paddingTop: 80, paddingBottom: 180 }}>
+            <div className="flex-1 flex flex-col items-center justify-center text-center px-4 sm:px-8 pt-20 pb-12">
               {/* Label */}
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="flex items-center gap-2 mb-6"
+                className="flex items-center gap-2 mb-4"
               >
                 <div style={{ width: 24, height: 1, background: '#00FF87' }} />
-                <span className="font-mono text-[11px] tracking-widest" style={{ color: '#00FF87' }}>GLOBAL FOOTBALL // AI INTELLIGENCE</span>
+                <span className="font-mono text-[11px] tracking-widest text-[#00FF87]">GLOBAL FOOTBALL // AI INTELLIGENCE</span>
                 <div style={{ width: 24, height: 1, background: '#00FF87' }} />
               </motion.div>
 
@@ -283,13 +283,13 @@ export default function LandingPage() {
                 transition={{ delay: 0.35, duration: 0.6 }}
                 style={{
                   fontFamily: 'Space Grotesk, sans-serif',
-                  fontSize: 'clamp(42px, 6vw, 80px)',
+                  fontSize: 'clamp(36px, 5.5vw, 72px)',
                   fontWeight: 700,
-                  lineHeight: 1.05,
+                  lineHeight: 1.1,
                   color: '#F0F4F8',
                   letterSpacing: '-0.02em',
-                  maxWidth: 900,
-                  marginBottom: 24,
+                  maxWidth: 860,
+                  marginBottom: 16,
                 }}
               >
                 Football Intelligence<br />
@@ -301,9 +301,10 @@ export default function LandingPage() {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
-                style={{ fontSize: 18, color: '#94A3B8', maxWidth: 540, lineHeight: 1.6, fontFamily: 'Inter, sans-serif', marginBottom: 40 }}
+                className="text-[16px] md:text-[18px] text-gray-400 max-w-[540px] leading-relaxed mb-8"
+                style={{ fontFamily: 'Inter, sans-serif' }}
               >
-                AI-powered tactical analysis, win probability, momentum tracking and player DNA scoring — built for the 2026 World Cup.
+                AI-powered tactical analysis, win probability, momentum tracking and player DNA scoring — built for modern elite football.
               </motion.p>
 
               {/* CTAs */}
@@ -311,56 +312,23 @@ export default function LandingPage() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.65, duration: 0.5 }}
-                className="flex flex-col sm:flex-row items-center gap-6 mt-12 relative z-20"
+                className="flex flex-col sm:flex-row items-center gap-4 relative z-20 mb-12"
               >
-                <style>{`
-                  @keyframes scanline {
-                    0% { transform: translateY(-20px); opacity: 0; }
-                    10% { opacity: 1; }
-                    90% { opacity: 1; }
-                    100% { transform: translateY(80px); opacity: 0; }
-                  }
-                  .scan-effect {
-                    animation: scanline 2s linear infinite;
-                  }
-                `}</style>
-
                 {/* Primary Tactical Trigger */}
                 <button
                   onClick={() => router.push('/matches')}
-                  className="group relative flex flex-col items-center justify-center px-16 py-6 rounded-[8px] border overflow-hidden transition-all duration-300 hover:scale-[1.02]"
-                  style={{ 
-                    background: '#050508',
-                    borderColor: '#00FF87',
-                    boxShadow: '0 0 30px rgba(0,255,135,0.2), inset 0 0 20px rgba(0,255,135,0.15)' 
-                  }}
+                  className="group relative flex items-center justify-center gap-3 px-8 py-3.5 rounded-[6px] border border-[#00FF87] bg-[#050508] transition-all duration-200 hover:scale-[1.02] shadow-[0_0_20px_rgba(0,255,135,0.2)] cursor-pointer"
                 >
-                  <div className="absolute inset-0 bg-[#00FF87] opacity-0 group-hover:opacity-10 transition-opacity duration-300" />
-                  <div className="absolute top-0 left-0 right-0 h-[2px] bg-[#00FF87] opacity-0 group-hover:opacity-50 blur-[1px] group-hover:scan-effect" />
-                  
-                  <span className="font-mono text-[11px] tracking-[0.3em] mb-2" style={{ color: '#00FF87' }}>CMD_EXECUTE_WAR_ROOM</span>
-                  <div className="flex items-center gap-4">
-                    <span className="font-mono text-[22px] font-bold tracking-widest text-white">ENTER WAR ROOM</span>
-                    <ChevronRight size={24} strokeWidth={3} style={{ color: '#00FF87' }} className="group-hover:translate-x-2 transition-transform" />
-                  </div>
+                  <span className="font-mono text-[14px] font-bold tracking-wider text-white">ENTER WAR ROOM</span>
+                  <ChevronRight size={18} strokeWidth={2.5} className="text-[#00FF87] group-hover:translate-x-1 transition-transform" />
                 </button>
 
                 {/* Secondary Console Button */}
                 <button
                   onClick={() => router.push('/matches?tab=live')}
-                  className="group relative flex flex-col items-center justify-center px-14 py-6 rounded-[8px] border transition-all duration-300 hover:scale-[1.02]"
-                  style={{ 
-                    background: 'rgba(15,17,23,0.5)', 
-                    backdropFilter: 'blur(16px)', 
-                    borderColor: 'rgba(255,255,255,0.2)',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
-                  }}
+                  className="group relative flex items-center justify-center px-7 py-3.5 rounded-[6px] border border-white/15 bg-[#0F1117]/80 backdrop-blur-md transition-all duration-200 hover:scale-[1.02] hover:border-white/30 cursor-pointer"
                 >
-                  <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-5 transition-opacity duration-300" />
-                  <span className="font-mono text-[11px] tracking-[0.3em] mb-2 opacity-60 text-white">SYS_EXPLORE_MATCHES</span>
-                  <div className="flex items-center gap-3">
-                    <span className="font-mono text-[20px] tracking-widest text-[#F0F4F8]">EXPLORE MATCHES</span>
-                  </div>
+                  <span className="font-mono text-[14px] font-medium tracking-wider text-gray-200">EXPLORE MATCHES</span>
                 </button>
               </motion.div>
 
@@ -368,8 +336,8 @@ export default function LandingPage() {
               <motion.div
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.9 }}
-                className="flex flex-wrap items-center justify-center gap-8 md:gap-14 mt-16"
+                transition={{ delay: 0.85 }}
+                className="flex flex-wrap items-center justify-center gap-8 md:gap-14 py-4 px-6 rounded-[8px] bg-[#0F1117]/50 border border-white/5 backdrop-blur-sm"
               >
                 {[
                   { value: accuracy ? `${accuracy.toFixed(1)}%` : '57.6%', label: 'MODEL ACCURACY' },
@@ -378,10 +346,10 @@ export default function LandingPage() {
                   { value: '44%', label: 'ELO IMPORTANCE' },
                 ].map(({ value, label }) => (
                   <div key={label} className="flex flex-col items-center">
-                    <span className="font-mono font-bold text-[28px] md:text-[34px] text-white leading-none">
+                    <span className="font-mono font-bold text-[26px] md:text-[30px] text-white leading-none">
                       {value}
                     </span>
-                    <span className="font-mono text-[11px] tracking-widest mt-1.5 text-gray-500">
+                    <span className="font-mono text-[10px] tracking-widest mt-1.5 text-gray-500">
                       {label}
                     </span>
                   </div>
@@ -389,53 +357,55 @@ export default function LandingPage() {
               </motion.div>
             </div>
 
-            {/* Feature strip - Modern Glass Tactical Cards */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.1, duration: 0.6 }}
-              className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto px-6 z-20 w-full mb-32"
-            >
-              {[
-                {
-                  icon: <Zap size={28} className="text-[#00FF87]" />,
-                  title: 'Momentum Engine',
-                  desc: 'Real-time momentum scoring computed dynamically from shot quality, possession swings, and rolling xG deltas.',
-                },
-                {
-                  icon: <Dna size={28} className="text-[#38BDF8]" />,
-                  title: 'Player DNA Fingerprint',
-                  desc: 'Comprehensive scouting radar across 6 tactical attributes, with archetype similarity benchmarks and role fit indices.',
-                },
-                {
-                  icon: <Bot size={28} className="text-[#7C3AED]" />,
-                  title: 'AI Tactical Command',
-                  desc: '4 distinct analyst personalities (Broadcast, Tactical, Coach, Fan) streaming live commentary and match intelligence.',
-                },
-              ].map(({ icon, title, desc }) => (
-                <div
-                  key={title}
-                  className="p-8 rounded-[12px] flex flex-col gap-4 transition-all duration-300 hover:-translate-y-1"
-                  style={{
-                    background: 'rgba(15, 17, 23, 0.7)',
-                    backdropFilter: 'blur(20px)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                  }}
-                >
-                  <div className="w-12 h-12 rounded-[8px] bg-white/5 border border-white/10 flex items-center justify-center">
-                    {icon}
+            {/* Feature strip - Centered Modern Glass Tactical Cards */}
+            <div className="w-full flex justify-center px-4 sm:px-6 lg:px-8 mb-32 z-20">
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.0, duration: 0.6 }}
+                className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl"
+              >
+                {[
+                  {
+                    icon: <Zap size={28} className="text-[#00FF87]" />,
+                    title: 'Momentum Engine',
+                    desc: 'Real-time momentum scoring computed dynamically from shot quality, possession swings, and rolling xG deltas.',
+                  },
+                  {
+                    icon: <Dna size={28} className="text-[#38BDF8]" />,
+                    title: 'Player DNA Fingerprint',
+                    desc: 'Comprehensive scouting radar across 6 tactical attributes, with archetype similarity benchmarks and role fit indices.',
+                  },
+                  {
+                    icon: <Bot size={28} className="text-[#7C3AED]" />,
+                    title: 'AI Tactical Command',
+                    desc: '4 distinct analyst personalities (Broadcast, Tactical, Coach, Fan) streaming live commentary and match intelligence.',
+                  },
+                ].map(({ icon, title, desc }) => (
+                  <div
+                    key={title}
+                    className="p-8 rounded-[12px] flex flex-col gap-4 transition-all duration-300 hover:-translate-y-1"
+                    style={{
+                      background: 'rgba(15, 17, 23, 0.75)',
+                      backdropFilter: 'blur(20px)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                    }}
+                  >
+                    <div className="w-12 h-12 rounded-[8px] bg-white/5 border border-white/10 flex items-center justify-center">
+                      {icon}
+                    </div>
+                    <div>
+                      <h3 className="text-[20px] font-bold text-white mb-2" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+                        {title}
+                      </h3>
+                      <p className="text-[13px] text-gray-400 font-sans leading-relaxed">
+                        {desc}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-[20px] font-bold text-white mb-2" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-                      {title}
-                    </h3>
-                    <p className="text-[13px] text-gray-400 font-sans leading-relaxed">
-                      {desc}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </motion.div>
+                ))}
+              </motion.div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
