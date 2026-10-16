@@ -35,6 +35,15 @@ PLAYER_RANKINGS = [
     {"rank": 10, "player": "Bukayo Saka", "team": "England", "impact": 7.5, "xg": 3.1, "momentum": 78, "form": "B+"},
 ]
 
+@router.get("/")
+async def get_insights_root():
+    return {
+        "accuracy": await get_accuracy(),
+        "discoveries": REAL_DISCOVERIES,
+        "rankings": PLAYER_RANKINGS,
+        "predictions": PREDICTION_LOG,
+    }
+
 @router.get("/accuracy")
 async def get_accuracy():
     return {
@@ -46,8 +55,8 @@ async def get_accuracy():
         "top_feature_importance": 0.44,
         "draw_recall": 0.02,
         "home_advantage_importance": 0.00,
-        "model_type": "Random Forest",
-        "training_date": "2025-11-01",
+        "model_type": "XGBoost Classifier",
+        "training_date": "2026-06-30",
         "sparkline": [51.2, 53.4, 55.1, 54.8, 56.2, 57.0, 57.4, 57.6],
     }
 

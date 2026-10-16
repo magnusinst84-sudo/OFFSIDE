@@ -1,34 +1,52 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
-import os, google.generativeai as genai
+import os, httpx
 from typing import Optional
 
 router = APIRouter()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+
+async def call_gemini(prompt: str) -> Optional[str]:
+    if not GEMINI_API_KEY:
+        return None
+    url = f"{GEMINI_API_URL}?key={GEMINI_API_KEY}"
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": 0.7, "maxOutputTokens": 300}
+    }
+    try:
+        async with httpx.AsyncClient(timeout=12.0) as client:
+            r = await client.post(url, json=payload)
+            if r.status_code == 200:
+                data = r.json()
+                candidates = data.get("candidates", [])
+                if candidates:
+                    parts = candidates[0].get("content", {}).get("parts", [])
+                    if parts:
+                        return parts[0].get("text", "").strip()
+            print(f"[commentary] Gemini HTTP {r.status_code}: {r.text[:200]}")
+    except Exception as e:
+        print(f"[commentary] Gemini call exception: {e}")
+    return None
 
 PERSONALITY_PROMPTS = {
     "broadcast": (
-        "You are a professional football broadcast commentator — energetic, dramatic, eloquent. "
-        "Use vivid metaphors, build suspense, reference football history. Be concise (2-3 sentences max). "
-        "Speak in present tense. Make every moment feel monumental."
+        "You are an elite live football broadcast commentator — dramatic, articulate, and punchy. "
+        "Deliver in present tense with vivid analogies. Keep to 2-3 high-impact sentences."
     ),
     "tactical": (
-        "You are an elite tactical football analyst — precise, data-driven, clinical. "
-        "Reference formations, pressing triggers, spatial dynamics, xG values. "
-        "2-4 sentences. Use football analytics terminology. Be insightful not obvious."
+        "You are an advanced football tactical analyst. Evaluate shapes, pressing structures, passing lanes, and xG efficiency. "
+        "Be clinical, data-aware, and concise (2-3 sentences)."
     ),
     "coach": (
-        "You are a seasoned international football coach — authoritative, direct, motivational. "
-        "Speak as if giving halftime team talk. Reference specific player positions and roles. "
-        "2-3 sentences. Pragmatic. Focused on what to fix or maintain."
+        "You are an experienced technical director and top-flight manager. Offer direct instructions, team talk energy, "
+        "and tactical adjustments. Keep to 2-3 sentences."
     ),
     "fan": (
-        "You are a passionate, unhinged football fan — raw emotion, humor, hyperbole. "
-        "CAPS for emphasis. Include at least one dramatic exaggeration. "
-        "2-3 sentences. Funny but knowledgeable. Reference clubs, managers, iconic moments."
+        "You are an authentic, expressive football fanatic. React with passion, club banter, and relatable fan emotion. "
+        "2-3 punchy sentences."
     ),
 }
 
@@ -74,28 +92,23 @@ def build_commentary_prompt(req: CommentaryRequest) -> str:
 
 @router.post("/generate")
 async def generate_commentary(req: CommentaryRequest):
-    if not GEMINI_API_KEY:
+    prompt = build_commentary_prompt(req)
+    text = await call_gemini(prompt)
+    if not text:
         return _fallback_commentary(req)
-    try:
-        model = genai.GenerativeModel("gemini-2.0-flash")
-        prompt = build_commentary_prompt(req)
-        response = model.generate_content(prompt)
-        text = response.text.strip()
-        return {
-            "text": text,
-            "personality": req.personality,
-            "event_type": req.event_type,
-            "match_id": req.match_id,
-        }
-    except Exception as e:
-        return _fallback_commentary(req)
+    return {
+        "text": text,
+        "personality": req.personality,
+        "event_type": req.event_type,
+        "match_id": req.match_id,
+    }
 
 def _fallback_commentary(req: CommentaryRequest) -> dict:
     fallbacks = {
-        "tactical": "The tactical battle is intensifying. Both sides are probing for structural weaknesses in the opponent's defensive block.",
-        "broadcast": "What a contest this is! Both teams leaving everything on the pitch in this crucial encounter.",
-        "coach": "We need to maintain our shape and be patient. The chance will come — stay disciplined.",
-        "fan": "COME ON! This is EXACTLY the kind of match that gives you grey hairs!! 😤",
+        "tactical": "The tactical block is shifting rapidly. Both managers are testing passing networks through the half-spaces.",
+        "broadcast": "What intensity out there! High tempo, passionate duels, every loose ball contested with conviction.",
+        "coach": "Keep your defensive shape, maintain discipline, and transition rapidly when the pressing trigger is activated.",
+        "fan": "WHAT A GAME! You can't look away for a single second! Football at its absolute finest! 🔥",
     }
     return {
         "text": fallbacks.get(req.personality, fallbacks["tactical"]),
@@ -104,47 +117,39 @@ def _fallback_commentary(req: CommentaryRequest) -> dict:
         "match_id": req.match_id,
     }
 
-
 @router.post("/ask")
 async def ask_analyst(req: AskRequest):
-    if not GEMINI_API_KEY:
+    system = PERSONALITY_PROMPTS.get(req.personality, PERSONALITY_PROMPTS["tactical"])
+    context_parts = [system]
+    
+    if req.match_context:
+        mc = req.match_context
+        context_parts.append(
+            f"\nCurrent match context: {mc.get('home', 'Home')} vs {mc.get('away', 'Away')}, "
+            f"Score: {mc.get('score', {})}, Minute: {mc.get('minute', '?')}"
+        )
+    
+    history_text = ""
+    if req.conversation_history:
+        for msg in req.conversation_history[-6:]:
+            role = "User" if msg.get("role") == "user" else "Analyst"
+            history_text += f"\n{role}: {msg.get('content', '')}"
+    
+    full_prompt = "\n".join(context_parts)
+    if history_text:
+        full_prompt += f"\n\nConversation history:{history_text}"
+    full_prompt += f"\n\nUser Question: {req.question}\nAnalyst Response:"
+    
+    answer = await call_gemini(full_prompt)
+    if not answer:
         return _fallback_ask(req)
-    try:
-        system = PERSONALITY_PROMPTS.get(req.personality, PERSONALITY_PROMPTS["tactical"])
-        context_parts = [system]
-        
-        if req.match_context:
-            mc = req.match_context
-            context_parts.append(
-                f"\nCurrent match context: {mc.get('home', 'Home')} vs {mc.get('away', 'Away')}, "
-                f"Score: {mc.get('score', {})}, Minute: {mc.get('minute', '?')}"
-            )
-        
-        history_text = ""
-        if req.conversation_history:
-            for msg in req.conversation_history[-6:]:
-                role = "User" if msg.get("role") == "user" else "Analyst"
-                history_text += f"\n{role}: {msg.get('content', '')}"
-        
-        full_prompt = "\n".join(context_parts)
-        if history_text:
-            full_prompt += f"\n\nConversation history:{history_text}"
-        full_prompt += f"\n\nUser: {req.question}\nAnalyst:"
-        
-        model = genai.GenerativeModel("gemini-2.0-flash")
-        response = model.generate_content(full_prompt)
-        text = response.text.strip()
-        
-        return {
-            "answer": text,
-            "personality": req.personality,
-        }
-    except Exception as e:
-        print(f"[commentary] Gemini call failed: {e}")
-        return _fallback_ask(req)
+    return {
+        "answer": answer,
+        "personality": req.personality,
+    }
 
 def _fallback_ask(req: AskRequest) -> dict:
     return {
-        "answer": "The tactical engine is processing your query. Our AI analyst is analyzing the match dynamics — please try again in a moment.",
+        "answer": "Analyzing the tactical phase and player positioning. The structure suggests aggressive counter-pressing in transition.",
         "personality": req.personality,
     }

@@ -28,8 +28,8 @@ export function MatchHeader({ match, prediction, isLoading }: MatchHeaderProps) 
           <Skeleton width={120} height={12} />
         ) : (
           <div className="flex flex-col">
-            <span className="font-mono text-[10px] tracking-widest" style={{ color: '#6B7280' }}>
-              {match?.competition ?? 'WORLD CUP 2026'}
+            <span className="font-mono text-[10px] tracking-widest uppercase" style={{ color: '#6B7280' }}>
+              {match?.competition ?? 'FOOTBALL INTELLIGENCE'}
             </span>
             {match?.status === 'live' && <LiveBadge size="sm" />}
           </div>

@@ -4,6 +4,11 @@ import * as api from '@/lib/api'
 
 // ─── Live match data — polls every 30s ────────────────
 export const useLiveMatch = (matchId: string | null) => {
+  const { data: matchDetail } = useSWR(
+    matchId ? `match-detail-${matchId}` : null,
+    () => api.getMatchDetail(matchId!),
+    { refreshInterval: 30000 }
+  )
   const { data: stats, error: statsError } = useSWR(
     matchId ? `match-stats-${matchId}` : null,
     () => api.getMatchStats(matchId!),
@@ -20,6 +25,7 @@ export const useLiveMatch = (matchId: string | null) => {
     { refreshInterval: 300000 }
   )
   return {
+    matchDetail,
     stats,
     events: eventsData?.events ?? [],
     lineups,

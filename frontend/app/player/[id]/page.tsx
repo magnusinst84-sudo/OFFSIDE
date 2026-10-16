@@ -1,11 +1,11 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { getPlayerById, searchPlayersLocal } from '@/lib/data/players'
+import { getPlayerById as getPlayerLocal, searchPlayersLocal } from '@/lib/data/players'
+import { getPlayerById as getPlayerApi, getPlayerDNA } from '@/lib/api'
 import { DNACard } from '@/components/player/DNACard'
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer } from 'recharts'
 import { Search } from 'lucide-react'
-import { notFound } from 'next/navigation'
 
 const FALLBACK_PLAYER_ID = 'fra-mbappe'
 
@@ -15,30 +15,83 @@ export default function PlayerPage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
+  const [player, setPlayer] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
 
-  const player = getPlayerById(id)
+  useEffect(() => {
+    let mounted = true
+    const local = getPlayerLocal(id)
+    if (local) {
+      setPlayer(local)
+      setLoading(false)
+      return
+    }
 
-  if (!player) {
-    return notFound()
+    // Try backend API for player
+    getPlayerApi(id)
+      .then(async res => {
+        if (!mounted) return
+        if (res && !res.error) {
+          const dnaRes = await getPlayerDNA(id).catch(() => null)
+          const merged = {
+            id: res.id,
+            name: res.name,
+            team: res.team || 'International',
+            position: res.position || 'Forward',
+            dna_score: dnaRes?.dna_score || 84,
+            attributes: dnaRes?.attributes || { pace: 80, dribbling: 82, passing: 78, shooting: 80, defending: 50, physicality: 70 },
+            role_suitability: dnaRes?.role_suitability || { striker: 85, winger: 80, cam: 70, cm: 60 },
+            strengths: dnaRes?.strengths || ['Technical execution', 'High game tempo'],
+            weaknesses: dnaRes?.weaknesses || ['Defensive transitions'],
+            comparison_players: dnaRes?.comparison_players || ['Top-flight European Archetype'],
+            goals: res.goals || 0,
+            assists: res.assists || 0,
+            xg: res.xg || 0.0,
+            xa: res.xa || 0.0,
+            minutes_played: res.minutes_played || 1200,
+            shots: res.shots || [],
+          }
+          setPlayer(merged)
+        } else {
+          setPlayer(getPlayerLocal(FALLBACK_PLAYER_ID))
+        }
+        setLoading(false)
+      })
+      .catch(() => {
+        if (mounted) {
+          setPlayer(getPlayerLocal(FALLBACK_PLAYER_ID))
+          setLoading(false)
+        }
+      })
+
+    return () => { mounted = false }
+  }, [id])
+
+  if (loading || !player) {
+    return (
+      <div className="flex items-center justify-center" style={{ minHeight: '100vh', background: '#050508' }}>
+        <p className="font-mono text-[13px] tracking-widest text-[#00FF87] animate-pulse">LOADING PLAYER DNA...</p>
+      </div>
+    )
   }
 
   const searchResults = searchQuery.length > 1 ? searchPlayersLocal(searchQuery) : []
 
   const radarData = [
-    { attribute: 'PACE', value: player.attributes.pace },
-    { attribute: 'DRIBBLE', value: player.attributes.dribbling },
-    { attribute: 'PASSING', value: player.attributes.passing },
-    { attribute: 'SHOOT', value: player.attributes.shooting },
-    { attribute: 'DEFEND', value: player.attributes.defending },
-    { attribute: 'PHYSIC', value: player.attributes.physicality },
+    { attribute: 'PACE', value: player.attributes?.pace ?? 75 },
+    { attribute: 'DRIBBLE', value: player.attributes?.dribbling ?? 75 },
+    { attribute: 'PASSING', value: player.attributes?.passing ?? 75 },
+    { attribute: 'SHOOT', value: player.attributes?.shooting ?? 75 },
+    { attribute: 'DEFEND', value: player.attributes?.defending ?? 75 },
+    { attribute: 'PHYSIC', value: player.attributes?.physicality ?? 75 },
   ]
 
   const stats = [
     { label: 'GOALS', value: player.goals },
     { label: 'ASSISTS', value: player.assists },
-    { label: 'XG', value: player.xg.toFixed(2) },
-    { label: 'XA', value: player.xa.toFixed(2) },
-    { label: 'MINUTES', value: player.minutes_played.toLocaleString() },
+    { label: 'XG', value: typeof player.xg === 'number' ? player.xg.toFixed(2) : player.xg ?? '—' },
+    { label: 'XA', value: typeof player.xa === 'number' ? player.xa.toFixed(2) : player.xa ?? '—' },
+    { label: 'MINUTES', value: player.minutes_played ? player.minutes_played.toLocaleString() : '—' },
   ]
 
   return (
@@ -129,12 +182,12 @@ export default function PlayerPage() {
                 <rect x="25" y="2" width="50" height="20" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" fill="none" />
                 <rect x="37" y="2" width="26" height="8" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" fill="none" />
                 <line x1="5" y1="58" x2="95" y2="58" stroke="rgba(255,255,255,0.06)" strokeWidth="0.4" />
-                {player.shot_map.map((shot, i) => (
+                {(player.shot_map || player.shots || []).map((shot: any, i: number) => (
                   <circle
                     key={i}
                     cx={shot.x}
                     cy={shot.y * 0.6}
-                    r={1.5 + shot.xg * 5}
+                    r={1.5 + (shot.xg || 0.1) * 5}
                     fill={shot.outcome === 'goal' ? '#00FF87' : shot.outcome === 'on_target' ? '#F59E0B' : '#E8003D'}
                     fillOpacity={0.8}
                   />
@@ -142,7 +195,7 @@ export default function PlayerPage() {
                 {/* Legend */}
                 <text x="6" y="57" fontFamily="IBM Plex Mono" fontSize="2.5" fill="#6B7280">● GOAL  ● ON TARGET  ● OFF</text>
               </svg>
-              {player.shot_map.length === 0 && (
+              {(!player.shot_map || player.shot_map.length === 0) && (!player.shots || player.shots.length === 0) && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <span className="font-mono text-[10px]" style={{ color: '#6B7280' }}>NO SHOT DATA — GOALKEEPER</span>
                 </div>
@@ -199,14 +252,14 @@ export default function PlayerPage() {
           {/* Strengths */}
           <div>
             <p className="font-mono text-[10px] tracking-widest mb-2" style={{ color: '#00FF87' }}>STRENGTHS</p>
-            {player.strengths.map((s, i) => (
+            {(player.strengths || []).map((s: string, i: number) => (
               <div key={i} className="flex items-center gap-2 py-1">
                 <span style={{ color: '#00FF87', fontSize: 10 }}>✓</span>
                 <span className="font-mono text-[11px]" style={{ color: '#94A3B8' }}>{s}</span>
               </div>
             ))}
             <p className="font-mono text-[10px] tracking-widest mt-3 mb-2" style={{ color: '#E8003D' }}>WEAKNESSES</p>
-            {player.weaknesses.map((w, i) => (
+            {(player.weaknesses || []).map((w: string, i: number) => (
               <div key={i} className="flex items-center gap-2 py-1">
                 <span style={{ color: '#E8003D', fontSize: 10 }}>✗</span>
                 <span className="font-mono text-[11px]" style={{ color: '#94A3B8' }}>{w}</span>
@@ -217,7 +270,7 @@ export default function PlayerPage() {
           {/* Role Suitability */}
           <div>
             <p className="font-mono text-[10px] tracking-widest mb-2" style={{ color: '#7C3AED' }}>ROLE SUITABILITY</p>
-            {Object.entries(player.role_suitability).map(([role, val]) => (
+            {Object.entries(player.role_suitability || {}).map(([role, val]: [string, any]) => (
               <div key={role} className="flex items-center gap-2 py-1">
                 <span className="font-mono text-[9px] w-16" style={{ color: '#6B7280' }}>{role.toUpperCase()}</span>
                 <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
@@ -232,7 +285,7 @@ export default function PlayerPage() {
           <div>
             <p className="font-mono text-[10px] tracking-widest mb-2" style={{ color: '#6B7280' }}>SIMILAR PLAYERS</p>
             <div className="flex flex-wrap gap-2">
-              {player.comparison_players.map(name => (
+              {(player.comparison_players || []).map((name: string) => (
                 <span
                   key={name}
                   className="font-mono text-[10px] px-2 py-1 rounded-[2px] cursor-pointer transition-colors"

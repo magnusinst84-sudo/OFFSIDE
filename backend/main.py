@@ -23,6 +23,12 @@ app.include_router(commentary.router, prefix="/api/commentary", tags=["Commentar
 app.include_router(players.router,    prefix="/api/players",    tags=["Players"])
 app.include_router(insights.router,   prefix="/api/insights",   tags=["Insights"])
 
+@app.on_event("startup")
+def on_startup():
+    from cache_db import clear_cache
+    clear_cache()
+    print("[startup] Cleared API cache to ensure fresh top-tier matches.")
+
 @app.get("/")
 def root():
     return {"status": "OFFSIDE API running", "version": "2.0.0"}

@@ -1,314 +1,210 @@
 from fastapi import APIRouter, HTTPException
 import os, httpx, asyncio
 from datetime import datetime
+from cache_db import get_cache, set_cache
+
+from dotenv import load_dotenv
+load_dotenv()
 
 router = APIRouter()
 
-API_FOOTBALL_KEY = os.getenv("API_FOOTBALL_KEY", "")
 API_FOOTBALL_BASE = "https://v3.football.api-sports.io"
 
-MOCK_MODE = os.getenv("MOCK_MODE", "false").lower() == "true"
+def get_headers():
+    key = os.getenv("API_FOOTBALL_KEY", "")
+    return {"x-apisports-key": key}
 
-HEADERS = {
-    "x-apisports-key": API_FOOTBALL_KEY
-}
+def is_mock_mode():
+    return os.getenv("MOCK_MODE", "false").lower() == "true"
 
 # ---------------------------------------------------------------------------
-# MOCK DATA — Real WC2026 fixtures, accurate as of June 30 2026 ~04:34 IST
-# (= June 29 2026 23:04 UTC)
+# FALLBACK DATA — Top European Competitions (UCL, Premier League, La Liga, etc.)
+# Used only if API-Football is unreachable or returns empty results.
 # ---------------------------------------------------------------------------
-
-# Germany vs Paraguay just finished. Netherlands vs Morocco kicks off ~01:00 UTC June 30 (06:30 IST).
-# Treating Netherlands vs Morocco as upcoming since it hasn't started yet at this timestamp.
 
 MOCK_LIVE_MATCHES = [
-    # Nothing live at 23:04 UTC June 29. Serve most recently finished as "live" for demo value.
     {
-        "id": 9010,
-        "home_team": {"id": 25, "name": "Germany", "logo": "https://media.api-sports.io/football/teams/25.png", "goals": None},
-        "away_team": {"id": 26, "name": "Paraguay", "logo": "https://media.api-sports.io/football/teams/26.png", "goals": None},
-        "score": {"home": None, "away": None},
+        "id": 9101,
+        "home_team": {"id": 541, "name": "Real Madrid", "logo": "https://media.api-sports.io/football/teams/541.png", "goals": 2},
+        "away_team": {"id": 50, "name": "Manchester City", "logo": "https://media.api-sports.io/football/teams/50.png", "goals": 1},
+        "score": {"home": 2, "away": 1},
         "status": "live",
-        "minute": 88,
-        "competition": "FIFA World Cup 2026 — Round of 32",
-        "venue": {"name": "Gillette Stadium", "city": "Foxborough"},
-        "date": "2026-06-29T16:30:00-04:00",
+        "minute": 67,
+        "competition": "UEFA Champions League",
+        "venue": {"name": "Santiago Bernabéu", "city": "Madrid"},
+        "date": "2026-10-16T19:00:00+00:00",
+    },
+    {
+        "id": 9102,
+        "home_team": {"id": 42, "name": "Arsenal", "logo": "https://media.api-sports.io/football/teams/42.png", "goals": 1},
+        "away_team": {"id": 157, "name": "Bayern Munich", "logo": "https://media.api-sports.io/football/teams/157.png", "goals": 1},
+        "score": {"home": 1, "away": 1},
+        "status": "live",
+        "minute": 54,
+        "competition": "UEFA Champions League",
+        "venue": {"name": "Emirates Stadium", "city": "London"},
+        "date": "2026-10-16T19:00:00+00:00",
     },
 ]
 
 MOCK_UPCOMING_MATCHES = [
     {
-        "id": 9011,
-        "home_team": {"id": 8, "name": "Netherlands", "logo": "https://media.api-sports.io/football/teams/1118.png", "goals": None},
-        "away_team": {"id": 9, "name": "Morocco", "logo": "https://media.api-sports.io/football/teams/1.png", "goals": None},
+        "id": 9103,
+        "home_team": {"id": 40, "name": "Liverpool", "logo": "https://media.api-sports.io/football/teams/40.png", "goals": None},
+        "away_team": {"id": 49, "name": "Chelsea", "logo": "https://media.api-sports.io/football/teams/49.png", "goals": None},
         "score": {"home": None, "away": None},
         "status": "upcoming",
         "minute": None,
-        "competition": "FIFA World Cup 2026 — Round of 32",
-        "venue": {"name": "Estadio BBVA", "city": "Guadalupe"},
-        "date": "2026-06-30T01:00:00+00:00",
+        "competition": "Premier League",
+        "venue": {"name": "Anfield", "city": "Liverpool"},
+        "date": "2026-10-18T15:30:00+00:00",
     },
     {
-        "id": 9012,
-        "home_team": {"id": 5, "name": "Ivory Coast", "logo": "https://media.api-sports.io/football/teams/5.png", "goals": None},
-        "away_team": {"id": 19, "name": "Norway", "logo": "https://media.api-sports.io/football/teams/19.png", "goals": None},
+        "id": 9104,
+        "home_team": {"id": 529, "name": "Barcelona", "logo": "https://media.api-sports.io/football/teams/529.png", "goals": None},
+        "away_team": {"id": 530, "name": "Atletico Madrid", "logo": "https://media.api-sports.io/football/teams/530.png", "goals": None},
         "score": {"home": None, "away": None},
         "status": "upcoming",
         "minute": None,
-        "competition": "FIFA World Cup 2026 — Round of 32",
-        "venue": {"name": "AT&T Stadium", "city": "Arlington"},
-        "date": "2026-06-30T17:00:00+00:00",
+        "competition": "La Liga",
+        "venue": {"name": "Camp Nou", "city": "Barcelona"},
+        "date": "2026-10-18T19:00:00+00:00",
     },
     {
-        "id": 9013,
-        "home_team": {"id": 2, "name": "France", "logo": "https://media.api-sports.io/football/teams/2.png", "goals": None},
-        "away_team": {"id": 20, "name": "Sweden", "logo": "https://media.api-sports.io/football/teams/20.png", "goals": None},
+        "id": 9105,
+        "home_team": {"id": 489, "name": "AC Milan", "logo": "https://media.api-sports.io/football/teams/489.png", "goals": None},
+        "away_team": {"id": 505, "name": "Inter Milan", "logo": "https://media.api-sports.io/football/teams/505.png", "goals": None},
         "score": {"home": None, "away": None},
         "status": "upcoming",
         "minute": None,
-        "competition": "FIFA World Cup 2026 — Round of 32",
-        "venue": {"name": "MetLife Stadium", "city": "East Rutherford"},
-        "date": "2026-06-30T21:00:00+00:00",
+        "competition": "Serie A",
+        "venue": {"name": "San Siro", "city": "Milan"},
+        "date": "2026-10-19T18:45:00+00:00",
     },
     {
-        "id": 9014,
-        "home_team": {"id": 16, "name": "Mexico", "logo": "https://media.api-sports.io/football/teams/16.png", "goals": None},
-        "away_team": {"id": 21, "name": "Ecuador", "logo": "https://media.api-sports.io/football/teams/21.png", "goals": None},
+        "id": 9106,
+        "home_team": {"id": 165, "name": "Borussia Dortmund", "logo": "https://media.api-sports.io/football/teams/165.png", "goals": None},
+        "away_team": {"id": 168, "name": "Bayer Leverkusen", "logo": "https://media.api-sports.io/football/teams/168.png", "goals": None},
         "score": {"home": None, "away": None},
         "status": "upcoming",
         "minute": None,
-        "competition": "FIFA World Cup 2026 — Round of 32",
-        "venue": {"name": "Estadio Azteca", "city": "Mexico City"},
-        "date": "2026-07-01T01:00:00+00:00",
+        "competition": "Bundesliga",
+        "venue": {"name": "Signal Iduna Park", "city": "Dortmund"},
+        "date": "2026-10-19T16:30:00+00:00",
     },
     {
-        "id": 9015,
-        "home_team": {"id": 10, "name": "England", "logo": "https://media.api-sports.io/football/teams/10.png", "goals": None},
-        "away_team": {"id": 22, "name": "DR Congo", "logo": "https://media.api-sports.io/football/teams/22.png", "goals": None},
+        "id": 9107,
+        "home_team": {"id": 85, "name": "Paris Saint-Germain", "logo": "https://media.api-sports.io/football/teams/85.png", "goals": None},
+        "away_team": {"id": 81, "name": "Marseille", "logo": "https://media.api-sports.io/football/teams/81.png", "goals": None},
         "score": {"home": None, "away": None},
         "status": "upcoming",
         "minute": None,
-        "competition": "FIFA World Cup 2026 — Round of 32",
-        "venue": {"name": "Mercedes-Benz Stadium", "city": "Atlanta"},
-        "date": "2026-07-01T16:00:00+00:00",
-    },
-    {
-        "id": 9016,
-        "home_team": {"id": 4, "name": "Belgium", "logo": "https://media.api-sports.io/football/teams/4.png", "goals": None},
-        "away_team": {"id": 23, "name": "Senegal", "logo": "https://media.api-sports.io/football/teams/23.png", "goals": None},
-        "score": {"home": None, "away": None},
-        "status": "upcoming",
-        "minute": None,
-        "competition": "FIFA World Cup 2026 — Round of 32",
-        "venue": {"name": "Lumen Field", "city": "Seattle"},
-        "date": "2026-07-01T20:00:00+00:00",
-    },
-    {
-        "id": 9017,
-        "home_team": {"id": 18, "name": "United States", "logo": "https://media.api-sports.io/football/teams/18.png", "goals": None},
-        "away_team": {"id": 24, "name": "Bosnia and Herzegovina", "logo": "https://media.api-sports.io/football/teams/24.png", "goals": None},
-        "score": {"home": None, "away": None},
-        "status": "upcoming",
-        "minute": None,
-        "competition": "FIFA World Cup 2026 — Round of 32",
-        "venue": {"name": "Levi's Stadium", "city": "Santa Clara"},
-        "date": "2026-07-02T00:00:00+00:00",
+        "competition": "Ligue 1",
+        "venue": {"name": "Parc des Princes", "city": "Paris"},
+        "date": "2026-10-20T19:45:00+00:00",
     },
 ]
 
 MOCK_FINISHED_MATCHES = [
     {
-        "id": 9001,
-        "home_team": {"id": 15, "name": "South Africa", "logo": "https://media.api-sports.io/football/teams/15.png", "goals": 0},
-        "away_team": {"id": 17, "name": "Canada", "logo": "https://media.api-sports.io/football/teams/17.png", "goals": 1},
-        "score": {"home": 0, "away": 1},
-        "status": "finished",
-        "minute": None,
-        "competition": "FIFA World Cup 2026 — Round of 32",
-        "venue": {"name": "SoFi Stadium", "city": "Inglewood"},
-        "date": "2026-06-28T19:00:00+00:00",
-    },
-    {
-        "id": 9002,
-        "home_team": {"id": 6, "name": "Brazil", "logo": "https://media.api-sports.io/football/teams/6.png", "goals": 2},
-        "away_team": {"id": 26, "name": "Japan", "logo": "https://media.api-sports.io/football/teams/26.png", "goals": 1},
-        "score": {"home": 2, "away": 1},
-        "status": "finished",
-        "minute": None,
-        "competition": "FIFA World Cup 2026 — Round of 32",
-        "venue": {"name": "NRG Stadium", "city": "Houston"},
-        "date": "2026-06-29T17:00:00+00:00",
-    },
-    # Group stage highlights
-    {
-        "id": 9003,
-        "home_team": {"id": 7, "name": "Argentina", "logo": "https://media.api-sports.io/football/teams/7.png", "goals": 3},
-        "away_team": {"id": 27, "name": "Jordan", "logo": "https://media.api-sports.io/football/teams/27.png", "goals": 1},
+        "id": 9108,
+        "home_team": {"id": 50, "name": "Manchester City", "logo": "https://media.api-sports.io/football/teams/50.png", "goals": 3},
+        "away_team": {"id": 33, "name": "Manchester United", "logo": "https://media.api-sports.io/football/teams/33.png", "goals": 1},
         "score": {"home": 3, "away": 1},
         "status": "finished",
         "minute": None,
-        "competition": "FIFA World Cup 2026 — Group J",
-        "venue": {"name": "AT&T Stadium", "city": "Arlington"},
-        "date": "2026-06-27T02:00:00+00:00",
+        "competition": "Premier League",
+        "venue": {"name": "Etihad Stadium", "city": "Manchester"},
+        "date": "2026-10-12T15:30:00+00:00",
     },
     {
-        "id": 9004,
-        "home_team": {"id": 2, "name": "France", "logo": "https://media.api-sports.io/football/teams/2.png", "goals": 4},
-        "away_team": {"id": 19, "name": "Norway", "logo": "https://media.api-sports.io/football/teams/19.png", "goals": 1},
-        "score": {"home": 4, "away": 1},
+        "id": 9109,
+        "home_team": {"id": 541, "name": "Real Madrid", "logo": "https://media.api-sports.io/football/teams/541.png", "goals": 2},
+        "away_team": {"id": 529, "name": "Barcelona", "logo": "https://media.api-sports.io/football/teams/529.png", "goals": 1},
+        "score": {"home": 2, "away": 1},
         "status": "finished",
         "minute": None,
-        "competition": "FIFA World Cup 2026 — Group I",
-        "venue": {"name": "Gillette Stadium", "city": "Foxborough"},
-        "date": "2026-06-26T20:00:00+00:00",
+        "competition": "La Liga",
+        "venue": {"name": "Santiago Bernabéu", "city": "Madrid"},
+        "date": "2026-10-10T19:00:00+00:00",
     },
     {
-        "id": 9005,
-        "home_team": {"id": 25, "name": "Germany", "logo": "https://media.api-sports.io/football/teams/25.png", "goals": 7},
-        "away_team": {"id": 28, "name": "Curaçao", "logo": "https://media.api-sports.io/football/teams/28.png", "goals": 1},
-        "score": {"home": 7, "away": 1},
-        "status": "finished",
-        "minute": None,
-        "competition": "FIFA World Cup 2026 — Group E",
-        "venue": {"name": "NRG Stadium", "city": "Houston"},
-        "date": "2026-06-14T17:00:00+00:00",
-    },
-    {
-        "id": 9006,
-        "home_team": {"id": 6, "name": "Brazil", "logo": "https://media.api-sports.io/football/teams/6.png", "goals": 1},
-        "away_team": {"id": 9, "name": "Morocco", "logo": "https://media.api-sports.io/football/teams/1.png", "goals": 1},
-        "score": {"home": 1, "away": 1},
-        "status": "finished",
-        "minute": None,
-        "competition": "FIFA World Cup 2026 — Group C",
-        "venue": {"name": "MetLife Stadium", "city": "East Rutherford"},
-        "date": "2026-06-13T22:00:00+00:00",
-    },
-    {
-        "id": 9007,
-        "home_team": {"id": 10, "name": "England", "logo": "https://media.api-sports.io/football/teams/10.png", "goals": 4},
-        "away_team": {"id": 29, "name": "Croatia", "logo": "https://media.api-sports.io/football/teams/29.png", "goals": 2},
+        "id": 9110,
+        "home_team": {"id": 157, "name": "Bayern Munich", "logo": "https://media.api-sports.io/football/teams/157.png", "goals": 4},
+        "away_team": {"id": 165, "name": "Borussia Dortmund", "logo": "https://media.api-sports.io/football/teams/165.png", "goals": 2},
         "score": {"home": 4, "away": 2},
         "status": "finished",
         "minute": None,
-        "competition": "FIFA World Cup 2026 — Group L",
-        "venue": {"name": "AT&T Stadium", "city": "Arlington"},
-        "date": "2026-06-17T20:00:00+00:00",
-    },
-    {
-        "id": 9008,
-        "home_team": {"id": 9, "name": "Spain", "logo": "https://media.api-sports.io/football/teams/9.png", "goals": 4},
-        "away_team": {"id": 30, "name": "Saudi Arabia", "logo": "https://media.api-sports.io/football/teams/30.png", "goals": 0},
-        "score": {"home": 4, "away": 0},
-        "status": "finished",
-        "minute": None,
-        "competition": "FIFA World Cup 2026 — Group H",
-        "venue": {"name": "Mercedes-Benz Stadium", "city": "Atlanta"},
-        "date": "2026-06-21T16:00:00+00:00",
+        "competition": "Bundesliga",
+        "venue": {"name": "Allianz Arena", "city": "Munich"},
+        "date": "2026-10-08T17:30:00+00:00",
     },
 ]
 
 MOCK_STATS = {
-    9002: {  # Brazil 2-1 Japan — realistic stats
-        "possession_home": 61.0, "possession_away": 39.0,
-        "shots_home": 14, "shots_away": 8,
-        "shots_on_target_home": 6, "shots_on_target_away": 3,
-        "corners_home": 7, "corners_away": 2,
-        "fouls_home": 8, "fouls_away": 13,
+    9101: {  # Real Madrid vs Man City
+        "possession_home": 48.0, "possession_away": 52.0,
+        "shots_home": 14, "shots_away": 12,
+        "shots_on_target_home": 6, "shots_on_target_away": 4,
+        "corners_home": 5, "corners_away": 6,
+        "fouls_home": 11, "fouls_away": 9,
+        "yellow_cards_home": 2, "yellow_cards_away": 1,
+        "red_cards_home": 0, "red_cards_away": 0,
+        "dangerous_attacks_home": 52, "dangerous_attacks_away": 58,
+        "xg_home": 1.9, "xg_away": 1.4,
+    },
+    9102: {  # Arsenal vs Bayern
+        "possession_home": 53.0, "possession_away": 47.0,
+        "shots_home": 11, "shots_away": 10,
+        "shots_on_target_home": 4, "shots_on_target_away": 4,
+        "corners_home": 6, "corners_away": 4,
+        "fouls_home": 8, "fouls_away": 10,
         "yellow_cards_home": 1, "yellow_cards_away": 2,
         "red_cards_home": 0, "red_cards_away": 0,
-        "dangerous_attacks_home": 68, "dangerous_attacks_away": 39,
-        "xg_home": 2.1, "xg_away": 0.9,
-    },
-    9010: {  # Germany vs Paraguay — live demo stats
-        "possession_home": 57.0, "possession_away": 43.0,
-        "shots_home": 13, "shots_away": 6,
-        "shots_on_target_home": 5, "shots_on_target_away": 2,
-        "corners_home": 6, "corners_away": 3,
-        "fouls_home": 10, "fouls_away": 15,
-        "yellow_cards_home": 1, "yellow_cards_away": 3,
-        "red_cards_home": 0, "red_cards_away": 0,
-        "dangerous_attacks_home": 59, "dangerous_attacks_away": 31,
-        "xg_home": 1.8, "xg_away": 0.6,
+        "dangerous_attacks_home": 47, "dangerous_attacks_away": 42,
+        "xg_home": 1.2, "xg_away": 1.1,
     },
 }
 
 MOCK_EVENTS = {
-    9002: [  # Brazil 2-1 Japan
-        {"minute": 29, "type": "goal", "team": "Japan", "player": "Sano", "detail": "Normal Goal"},
-        {"minute": 56, "type": "goal", "team": "Brazil", "player": "Casemiro", "detail": "Header"},
-        {"minute": 78, "type": "yellow_card", "team": "Japan", "player": "Kamada", "detail": "Foul"},
-        {"minute": 83, "type": "substitution", "team": "Brazil", "player": "Vinicius Jr.", "detail": "Substitution"},
-        {"minute": 90, "type": "goal", "team": "Brazil", "player": "Martinelli", "detail": "Normal Goal"},
-    ],
-    9010: [  # Germany vs Paraguay (live)
-        {"minute": 18, "type": "goal", "team": "Germany", "player": "Havertz", "detail": "Penalty"},
-        {"minute": 34, "type": "yellow_card", "team": "Paraguay", "player": "Galarza", "detail": "Foul"},
-        {"minute": 52, "type": "yellow_card", "team": "Germany", "player": "Schlotterbeck", "detail": "Foul"},
-        {"minute": 67, "type": "goal", "team": "Germany", "player": "Musiala", "detail": "Normal Goal"},
-        {"minute": 74, "type": "substitution", "team": "Paraguay", "player": "Maurício", "detail": "Substitution"},
+    9101: [  # Real Madrid 2-1 Man City (live 67')
+        {"minute": 12, "type": "goal", "team": "Real Madrid", "player": "Vinícius Jr.", "detail": "Normal Goal"},
+        {"minute": 33, "type": "yellow_card", "team": "Manchester City", "player": "Rodri", "detail": "Foul"},
+        {"minute": 41, "type": "goal", "team": "Manchester City", "player": "Haaland", "detail": "Header"},
+        {"minute": 58, "type": "goal", "team": "Real Madrid", "player": "Bellingham", "detail": "Normal Goal"},
+        {"minute": 64, "type": "substitution", "team": "Manchester City", "player": "De Bruyne", "detail": "Substitution"},
     ],
 }
 
 MOCK_LINEUPS = {
-    9010: {  # Germany vs Paraguay
-        "home": "4-2-3-1",
-        "away": "4-3-3",
-        "home_players": [
-            {"id": 1,  "name": "Ter Stegen",    "number": 1,  "position": "G", "x": 50, "y": 5},
-            {"id": 2,  "name": "Kimmich",        "number": 6,  "position": "D", "x": 80, "y": 18},
-            {"id": 3,  "name": "Schlotterbeck",  "number": 4,  "position": "D", "x": 62, "y": 18},
-            {"id": 4,  "name": "Rüdiger",        "number": 3,  "position": "D", "x": 38, "y": 18},
-            {"id": 5,  "name": "Raum",           "number": 5,  "position": "D", "x": 20, "y": 18},
-            {"id": 6,  "name": "Kroos",          "number": 8,  "position": "M", "x": 62, "y": 35},
-            {"id": 7,  "name": "Andrich",        "number": 23, "position": "M", "x": 38, "y": 35},
-            {"id": 8,  "name": "Musiala",        "number": 10, "position": "M", "x": 75, "y": 50},
-            {"id": 9,  "name": "Havertz",        "number": 7,  "position": "M", "x": 50, "y": 52},
-            {"id": 10, "name": "Gnabry",         "number": 11, "position": "M", "x": 25, "y": 50},
-            {"id": 11, "name": "Füllkrug",       "number": 9,  "position": "F", "x": 50, "y": 65},
-        ],
-        "away_players": [
-            {"id": 21, "name": "Gatito",         "number": 1,  "position": "G", "x": 50, "y": 95},
-            {"id": 22, "name": "Alderete",       "number": 4,  "position": "D", "x": 20, "y": 82},
-            {"id": 23, "name": "Balbuena",       "number": 3,  "position": "D", "x": 38, "y": 82},
-            {"id": 24, "name": "Alonso",         "number": 5,  "position": "D", "x": 62, "y": 82},
-            {"id": 25, "name": "Rojas",          "number": 2,  "position": "D", "x": 80, "y": 82},
-            {"id": 26, "name": "Galarza",        "number": 8,  "position": "M", "x": 25, "y": 65},
-            {"id": 27, "name": "Cubas",          "number": 5,  "position": "M", "x": 50, "y": 63},
-            {"id": 28, "name": "Villasanti",     "number": 16, "position": "M", "x": 75, "y": 65},
-            {"id": 29, "name": "Almiron",        "number": 23, "position": "F", "x": 20, "y": 48},
-            {"id": 30, "name": "Sanabria",       "number": 9,  "position": "F", "x": 50, "y": 45},
-            {"id": 31, "name": "Enciso",         "number": 11, "position": "F", "x": 80, "y": 48},
-        ],
-    },
-    9002: {  # Brazil 2-1 Japan
-        "home": "4-3-3",
+    9101: {  # Real Madrid vs Manchester City
+        "home": "4-3-1-2",
         "away": "4-2-3-1",
         "home_players": [
-            {"id": 1,  "name": "Alisson",        "number": 1,  "position": "G", "x": 50, "y": 5},
-            {"id": 2,  "name": "Danilo",         "number": 2,  "position": "D", "x": 80, "y": 20},
-            {"id": 3,  "name": "Marquinhos",     "number": 5,  "position": "D", "x": 60, "y": 20},
-            {"id": 4,  "name": "Militão",        "number": 3,  "position": "D", "x": 40, "y": 20},
-            {"id": 5,  "name": "Wendell",        "number": 6,  "position": "D", "x": 20, "y": 20},
-            {"id": 6,  "name": "Casemiro",       "number": 5,  "position": "M", "x": 50, "y": 38},
-            {"id": 7,  "name": "Paquetá",        "number": 10, "position": "M", "x": 30, "y": 38},
-            {"id": 8,  "name": "Guimarães",      "number": 8,  "position": "M", "x": 70, "y": 38},
-            {"id": 9,  "name": "Rodrygo",        "number": 11, "position": "F", "x": 20, "y": 58},
-            {"id": 10, "name": "Cunha",          "number": 9,  "position": "F", "x": 50, "y": 62},
-            {"id": 11, "name": "Vinícius Jr.",   "number": 7,  "position": "F", "x": 80, "y": 58},
+            {"id": 1,  "name": "Courtois",       "number": 1,  "position": "G", "x": 50, "y": 5},
+            {"id": 2,  "name": "Carvajal",      "number": 2,  "position": "D", "x": 80, "y": 18},
+            {"id": 3,  "name": "Rüdiger",       "number": 22, "position": "D", "x": 60, "y": 18},
+            {"id": 4,  "name": "Militão",       "number": 3,  "position": "D", "x": 40, "y": 18},
+            {"id": 5,  "name": "Mendy",         "number": 23, "position": "D", "x": 20, "y": 18},
+            {"id": 6,  "name": "Valverde",      "number": 15, "position": "M", "x": 75, "y": 35},
+            {"id": 7,  "name": "Tchouaméni",    "number": 14, "position": "M", "x": 50, "y": 32},
+            {"id": 8,  "name": "Camavinga",     "number": 12, "position": "M", "x": 25, "y": 35},
+            {"id": 9,  "name": "Bellingham",    "number": 5,  "position": "M", "x": 50, "y": 48},
+            {"id": 10, "name": "Rodrygo",       "number": 11, "position": "F", "x": 35, "y": 62},
+            {"id": 11, "name": "Vinícius Jr.",  "number": 7,  "position": "F", "x": 65, "y": 62},
         ],
         "away_players": [
-            {"id": 21, "name": "Suzuki",         "number": 12, "position": "G", "x": 50, "y": 95},
-            {"id": 22, "name": "Yamane",         "number": 2,  "position": "D", "x": 80, "y": 80},
-            {"id": 23, "name": "Itakura",        "number": 3,  "position": "D", "x": 60, "y": 80},
-            {"id": 24, "name": "Yoshida",        "number": 22, "position": "D", "x": 40, "y": 80},
-            {"id": 25, "name": "Mitoma",         "number": 10, "position": "D", "x": 20, "y": 80},
-            {"id": 26, "name": "Endo",           "number": 6,  "position": "M", "x": 62, "y": 65},
-            {"id": 27, "name": "Tanaka",         "number": 8,  "position": "M", "x": 38, "y": 65},
-            {"id": 28, "name": "Kamada",         "number": 14, "position": "M", "x": 75, "y": 50},
-            {"id": 29, "name": "Doan",           "number": 7,  "position": "M", "x": 50, "y": 50},
-            {"id": 30, "name": "Nakamura",       "number": 11, "position": "M", "x": 25, "y": 50},
-            {"id": 31, "name": "Ueda",           "number": 9,  "position": "F", "x": 50, "y": 38},
+            {"id": 21, "name": "Ederson",       "number": 31, "position": "G", "x": 50, "y": 95},
+            {"id": 22, "name": "Walker",        "number": 2,  "position": "D", "x": 80, "y": 82},
+            {"id": 23, "name": "Dias",          "number": 3,  "position": "D", "x": 60, "y": 82},
+            {"id": 24, "name": "Akanji",        "number": 25, "position": "D", "x": 40, "y": 82},
+            {"id": 25, "name": "Gvardiol",      "number": 24, "position": "D", "x": 20, "y": 82},
+            {"id": 26, "name": "Rodri",         "number": 16, "position": "M", "x": 40, "y": 68},
+            {"id": 27, "name": "Kovačić",       "number": 8,  "position": "M", "x": 60, "y": 68},
+            {"id": 28, "name": "Bernardo",      "number": 20, "position": "M", "x": 80, "y": 52},
+            {"id": 29, "name": "De Bruyne",     "number": 17, "position": "M", "x": 50, "y": 50},
+            {"id": 30, "name": "Foden",         "number": 47, "position": "M", "x": 20, "y": 52},
+            {"id": 31, "name": "Haaland",       "number": 9,  "position": "F", "x": 50, "y": 38},
         ],
     },
 }
@@ -380,33 +276,118 @@ def fmt_match(f: dict) -> dict:
         "score": {"home": goals.get("home"), "away": goals.get("away")},
         "status": mapped_status,
         "minute": elapsed,
-        "competition": league.get("name", "World Cup 2026"),
+        "competition": league.get("name") or "Global Football League",
         "venue": fmt_venue(fixture.get("venue", {})),
         "date": fixture.get("date", ""),
     }
+
+# ---------------------------------------------------------------------------
+# Top European Tournaments & Domestic Cups
+# ---------------------------------------------------------------------------
+# UCL (2), UEL (3), UECL (848)
+# Premier League (39), FA Cup (45), EFL Cup (48)
+# La Liga (140), Copa del Rey (143)
+# Bundesliga (78), DFB Pokal (81)
+# Serie A (135), Coppa Italia (137)
+# Ligue 1 (61), Coupe de France (66)
+TOP_LEAGUE_IDS = {2, 3, 848, 39, 45, 48, 140, 143, 78, 81, 135, 137, 61, 66}
+
+def is_top_flight(f: dict) -> bool:
+    league = f.get("league", {})
+    lid = league.get("id")
+    if lid in TOP_LEAGUE_IDS:
+        return True
+    
+    country = (league.get("country") or "").lower()
+    lname = (league.get("name") or "").lower()
+
+    # English Premier League and domestic cups only
+    if country in ("england", "united kingdom"):
+        if any(k in lname for k in ["premier league", "fa cup", "efl cup", "carabao"]):
+            return True
+
+    # UEFA competitions only
+    if country in ("world", "europe"):
+        if any(k in lname for k in ["uefa champions league", "champions league", "europa league", "conference league"]):
+            return True
+
+    # Spain (La Liga)
+    if country == "spain" and any(k in lname for k in ["la liga", "primera división", "copa del rey"]):
+        return True
+
+    # Germany (Bundesliga)
+    if country == "germany" and any(k in lname for k in ["bundesliga", "dfb-pokal", "dfb pokal"]):
+        return True
+
+    # Italy (Serie A)
+    if country == "italy" and any(k in lname for k in ["serie a", "coppa italia"]):
+        return True
+
+    # France (Ligue 1)
+    if country == "france" and any(k in lname for k in ["ligue 1", "coupe de france"]):
+        return True
+
+    return False
 
 # ---------------------------------------------------------------------------
 # Live API fetch
 # ---------------------------------------------------------------------------
 
 async def fetch_fixtures(status: str):
-    if not API_FOOTBALL_KEY:
+    headers = get_headers()
+    if not headers.get("x-apisports-key"):
         return []
+    
+    cache_key = f"fixtures_{status}_top_tier_v3"
+    # TTL: 45 seconds for live matches, 10 minutes for upcoming/finished
+    ttl = 45 if status == "1H-2H-ET-P-LIVE" else 600
+    cached = get_cache(cache_key)
+    if cached is not None:
+        return cached
+
     today_str = datetime.utcnow().strftime("%Y-%m-%d")
-    if status == "1H-2H-ET-P-LIVE":
-        params = {"live": "all"}
-    elif status == "NS":
-        params = {"date": today_str, "status": "NS"}
-    else:
-        params = {"league": 4, "season": 2024, "status": status}
-    async with httpx.AsyncClient(timeout=8.0) as client:
+    async with httpx.AsyncClient(timeout=10.0) as client:
         try:
-            r = await client.get(f"{API_FOOTBALL_BASE}/fixtures", headers=HEADERS, params=params)
-            if r.status_code != 200:
-                return []
-            data = r.json()
-            return [fmt_match(f) for f in data.get("response", [])][:20]
-        except Exception:
+            if status == "1H-2H-ET-P-LIVE":
+                r = await client.get(f"{API_FOOTBALL_BASE}/fixtures", headers=headers, params={"live": "all"})
+                if r.status_code != 200:
+                    return []
+                all_live = r.json().get("response", [])
+                # Strictly filter to top European competitions (UCL, UEL, UECL, Big 5 & cups)
+                fixtures = [f for f in all_live if is_top_flight(f)]
+            elif status == "NS":
+                r = await client.get(f"{API_FOOTBALL_BASE}/fixtures", headers=headers, params={"date": today_str, "status": "NS"})
+                data = r.json() if r.status_code == 200 else {}
+                day_fixtures = data.get("response", [])
+                top_today = [f for f in day_fixtures if is_top_flight(f)]
+                if top_today:
+                    fixtures = top_today
+                else:
+                    # Query upcoming top league games
+                    r_next = await client.get(f"{API_FOOTBALL_BASE}/fixtures", headers=headers, params={"next": 50})
+                    next_resp = r_next.json().get("response", []) if r_next.status_code == 200 else []
+                    top_next = [f for f in next_resp if is_top_flight(f)]
+                    fixtures = top_next
+            else:
+                r = await client.get(f"{API_FOOTBALL_BASE}/fixtures", headers=headers, params={"date": today_str, "status": "FT"})
+                data = r.json() if r.status_code == 200 else {}
+                day_fixtures = data.get("response", [])
+                top_today = [f for f in day_fixtures if is_top_flight(f)]
+                if top_today:
+                    fixtures = top_today
+                else:
+                    # Query recently finished top league matches
+                    r_last = await client.get(f"{API_FOOTBALL_BASE}/fixtures", headers=headers, params={"last": 50})
+                    last_resp = r_last.json().get("response", []) if r_last.status_code == 200 else []
+                    top_last = [f for f in last_resp if is_top_flight(f)]
+                    fixtures = top_last
+
+            formatted = [fmt_match(f) for f in fixtures][:25]
+            if formatted:
+                set_cache(cache_key, formatted, ttl_seconds=ttl)
+            return formatted
+        except Exception as e:
+            print(f"[matches] Error fetching fixtures: {e}")
             return []
 
 # ---------------------------------------------------------------------------
@@ -415,7 +396,7 @@ async def fetch_fixtures(status: str):
 
 @router.get("/live")
 async def get_live_matches():
-    if MOCK_MODE:
+    if is_mock_mode():
         return {"matches": MOCK_LIVE_MATCHES, "count": len(MOCK_LIVE_MATCHES), "source": "mock"}
     matches = await fetch_fixtures("1H-2H-ET-P-LIVE")
     if not matches:
@@ -424,7 +405,7 @@ async def get_live_matches():
 
 @router.get("/upcoming")
 async def get_upcoming_matches():
-    if MOCK_MODE:
+    if is_mock_mode():
         return {"matches": MOCK_UPCOMING_MATCHES, "count": len(MOCK_UPCOMING_MATCHES), "source": "mock"}
     matches = await fetch_fixtures("NS")
     if not matches:
@@ -433,22 +414,70 @@ async def get_upcoming_matches():
 
 @router.get("/finished")
 async def get_finished_matches():
-    if MOCK_MODE:
+    if is_mock_mode():
         return {"matches": MOCK_FINISHED_MATCHES, "count": len(MOCK_FINISHED_MATCHES), "source": "mock"}
     matches = await fetch_fixtures("FT-AET-PEN")
     if not matches:
         return {"matches": MOCK_FINISHED_MATCHES, "count": len(MOCK_FINISHED_MATCHES), "source": "mock_fallback"}
     return {"matches": matches, "count": len(matches), "source": "live"}
 
+@router.get("/{match_id}")
+async def get_match_detail(match_id: int):
+    # Check fallback lists first if mock mode
+    if is_mock_mode():
+        for m in MOCK_LIVE_MATCHES + MOCK_UPCOMING_MATCHES + MOCK_FINISHED_MATCHES:
+            if m["id"] == match_id:
+                return m
+        return MOCK_LIVE_MATCHES[0]
+
+    cache_key = f"match_detail_{match_id}"
+    cached = get_cache(cache_key)
+    if cached is not None:
+        return cached
+
+    headers = get_headers()
+    if not headers.get("x-apisports-key"):
+        for m in MOCK_LIVE_MATCHES + MOCK_UPCOMING_MATCHES + MOCK_FINISHED_MATCHES:
+            if m["id"] == match_id:
+                return m
+        return MOCK_LIVE_MATCHES[0]
+
+    async with httpx.AsyncClient(timeout=8.0) as client:
+        try:
+            r = await client.get(f"{API_FOOTBALL_BASE}/fixtures", headers=headers, params={"id": match_id})
+            if r.status_code == 200:
+                resp = r.json().get("response", [])
+                if resp:
+                    detail = fmt_match(resp[0])
+                    # Cache live fixture 45s, finished 1hr
+                    ttl = 45 if detail["status"] == "live" else 3600
+                    set_cache(cache_key, detail, ttl_seconds=ttl)
+                    return detail
+        except Exception:
+            pass
+
+    # Fallback to local mock matches if not found
+    for m in MOCK_LIVE_MATCHES + MOCK_UPCOMING_MATCHES + MOCK_FINISHED_MATCHES:
+        if m["id"] == match_id:
+            return m
+    return MOCK_LIVE_MATCHES[0]
+
 @router.get("/{match_id}/stats")
 async def get_match_stats(match_id: int):
-    if MOCK_MODE:
+    if is_mock_mode():
         return MOCK_STATS.get(match_id, _default_mock_stats())
-    if not API_FOOTBALL_KEY:
+    
+    cache_key = f"match_stats_{match_id}"
+    cached = get_cache(cache_key)
+    if cached is not None:
+        return cached
+
+    headers = get_headers()
+    if not headers.get("x-apisports-key"):
         return MOCK_STATS.get(match_id, _default_mock_stats())
     async with httpx.AsyncClient(timeout=8.0) as client:
         try:
-            r = await client.get(f"{API_FOOTBALL_BASE}/fixtures/statistics", headers=HEADERS, params={"fixture": match_id})
+            r = await client.get(f"{API_FOOTBALL_BASE}/fixtures/statistics", headers=headers, params={"fixture": match_id})
             if r.status_code != 200:
                 return MOCK_STATS.get(match_id, _default_mock_stats())
             data = r.json()
@@ -463,8 +492,13 @@ async def get_match_stats(match_id: int):
                 return float(v)
             def parse_int(v):
                 if v is None: return 0
-                return int(v)
-            return {
+                try: return int(v)
+                except Exception: return 0
+            def parse_float(v):
+                if v is None: return None
+                try: return float(v)
+                except Exception: return None
+            result = {
                 "possession_home": parse_pct(home_stats.get("Ball Possession")),
                 "possession_away": parse_pct(away_stats.get("Ball Possession")),
                 "shots_home": parse_int(home_stats.get("Total Shots")),
@@ -481,20 +515,31 @@ async def get_match_stats(match_id: int):
                 "red_cards_away": parse_int(away_stats.get("Red Cards")),
                 "dangerous_attacks_home": parse_int(home_stats.get("Dangerous Attacks")),
                 "dangerous_attacks_away": parse_int(away_stats.get("Dangerous Attacks")),
-                "xg_home": None, "xg_away": None,
+                "xg_home": parse_float(home_stats.get("expected_goals")),
+                "xg_away": parse_float(away_stats.get("expected_goals")),
             }
+            # Cache match stats for 30s during matches, 1 hour if finished
+            set_cache(cache_key, result, ttl_seconds=30)
+            return result
         except Exception:
             return MOCK_STATS.get(match_id, _default_mock_stats())
 
 @router.get("/{match_id}/events")
 async def get_match_events(match_id: int):
-    if MOCK_MODE:
+    if is_mock_mode():
         return {"events": MOCK_EVENTS.get(match_id, [])}
-    if not API_FOOTBALL_KEY:
+
+    cache_key = f"match_events_{match_id}"
+    cached = get_cache(cache_key)
+    if cached is not None:
+        return cached
+
+    headers = get_headers()
+    if not headers.get("x-apisports-key"):
         return {"events": MOCK_EVENTS.get(match_id, [])}
     async with httpx.AsyncClient(timeout=8.0) as client:
         try:
-            r = await client.get(f"{API_FOOTBALL_BASE}/fixtures/events", headers=HEADERS, params={"fixture": match_id})
+            r = await client.get(f"{API_FOOTBALL_BASE}/fixtures/events", headers=headers, params={"fixture": match_id})
             if r.status_code != 200:
                 return {"events": MOCK_EVENTS.get(match_id, [])}
             data = r.json()
@@ -516,19 +561,28 @@ async def get_match_events(match_id: int):
                     "player": ev.get("player", {}).get("name", ""),
                     "detail": detail,
                 })
-            return {"events": events}
+            result = {"events": events}
+            set_cache(cache_key, result, ttl_seconds=30)
+            return result
         except Exception:
             return {"events": MOCK_EVENTS.get(match_id, [])}
 
 @router.get("/{match_id}/lineups")
 async def get_match_lineups(match_id: int):
-    if MOCK_MODE:
+    if is_mock_mode():
         return MOCK_LINEUPS.get(match_id, _default_mock_lineups(match_id))
-    if not API_FOOTBALL_KEY:
+
+    cache_key = f"match_lineups_{match_id}"
+    cached = get_cache(cache_key)
+    if cached is not None:
+        return cached
+
+    headers = get_headers()
+    if not headers.get("x-apisports-key"):
         return MOCK_LINEUPS.get(match_id, _default_mock_lineups(match_id))
     async with httpx.AsyncClient(timeout=8.0) as client:
         try:
-            r = await client.get(f"{API_FOOTBALL_BASE}/fixtures/lineups", headers=HEADERS, params={"fixture": match_id})
+            r = await client.get(f"{API_FOOTBALL_BASE}/fixtures/lineups", headers=headers, params={"fixture": match_id})
             if r.status_code != 200:
                 return MOCK_LINEUPS.get(match_id, _default_mock_lineups(match_id))
             data = r.json()
@@ -556,7 +610,10 @@ async def get_match_lineups(match_id: int):
                 return players, formation
             home_players, home_formation = parse_players(response[0]) if len(response) > 0 else ([], "4-3-3")
             away_players, away_formation = parse_players(response[1]) if len(response) > 1 else ([], "4-3-3")
-            return {"home": home_formation, "away": away_formation, "home_players": home_players, "away_players": away_players}
+            result = {"home": home_formation, "away": away_formation, "home_players": home_players, "away_players": away_players}
+            # Lineups rarely change once announced, cache for 15 minutes
+            set_cache(cache_key, result, ttl_seconds=900)
+            return result
         except Exception:
             return MOCK_LINEUPS.get(match_id, _default_mock_lineups(match_id))
 

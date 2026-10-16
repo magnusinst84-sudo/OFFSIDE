@@ -1,6 +1,7 @@
 'use client'
 import React, { useState } from 'react'
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from 'recharts'
+import { useInsights } from '@/hooks/useMatchData'
 
 // ---------------------------------------------------------------------------
 // STATIC DATA — tied to real WC2026 demo matches (matches.py mock fixtures)
@@ -142,8 +143,21 @@ function MiniSparkline({ data, color }: { data: number[]; color: string }) {
 }
 
 export default function InsightsPage() {
+  const { accuracy, discoveries: liveDiscoveries, rankings: liveRankings, predLog: livePredLog, isLoading } = useInsights()
   const [sortCol, setSortCol] = useState<keyof PlayerRanking | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+
+  // Dynamic hero stats pulled from model metadata
+  const heroStats = accuracy ? [
+    { value: `${accuracy.model_accuracy}%`, label: 'MODEL ACCURACY', color: '#00FF87', sparkline: accuracy.sparkline || [52, 53, 55, 54, 56, 57, 57.2, 57.6] },
+    { value: accuracy.matches_trained.toLocaleString(), label: 'MATCHES TRAINED', color: '#3B82F6', sparkline: [28000, 29200, 30100, 30800, 31400, 31900, 32100, accuracy.matches_trained] },
+    { value: accuracy.teams_indexed.toString(), label: 'TEAMS INDEXED', color: '#7C3AED', sparkline: [300, 310, 318, 322, 328, 331, 334, accuracy.teams_indexed] },
+    { value: accuracy.top_feature || 'ELO DIFF', label: 'TOP FEATURE', color: '#F59E0B', sparkline: [38, 39, 41, 42, 43, 43.5, 44, 44] },
+  ] : HERO_STATS
+
+  const discoveriesList = liveDiscoveries.length > 0 ? liveDiscoveries : DISCOVERIES
+  const rankingsList = liveRankings.length > 0 ? liveRankings : PLAYER_RANKINGS
+  const predictionLogList = livePredLog.length > 0 ? livePredLog : PREDICTION_LOG
 
   const handleSort = (col: string) => {
     const key = col.toLowerCase() as keyof PlayerRanking
@@ -155,7 +169,7 @@ export default function InsightsPage() {
     }
   }
 
-  const sortedRankings = [...PLAYER_RANKINGS].sort((a, b) => {
+  const sortedRankings = [...rankingsList].sort((a, b) => {
     if (!sortCol) return a.rank - b.rank
     const aVal = a[sortCol]
     const bVal = b[sortCol]
@@ -183,7 +197,7 @@ export default function InsightsPage() {
 
         {/* Hero stat cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-          {HERO_STATS.map(({ value, label, color, sparkline }) => (
+          {heroStats.map(({ value, label, color, sparkline }) => (
             <div key={label} style={{ padding: 20, borderRadius: 4, background: '#0F1117', border: '1px solid rgba(255,255,255,0.06)' }}>
               <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontWeight: 700, fontSize: 40, color, lineHeight: 1, display: 'block', marginBottom: 4 }}>
                 {value}
@@ -201,10 +215,10 @@ export default function InsightsPage() {
         {/* AI Discoveries */}
         <div>
           <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, letterSpacing: '0.15em', color: '#6B7280', margin: 0, marginBottom: 16 }}>
-            AI DISCOVERIES
+            AI DISCOVERIES ({discoveriesList.length})
           </p>
           <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8, scrollbarWidth: 'thin' }}>
-            {DISCOVERIES.map(d => (
+            {discoveriesList.map((d: any) => (
               <div
                 key={d.id}
                 style={{
@@ -224,9 +238,9 @@ export default function InsightsPage() {
                 <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, lineHeight: 1.6, color: '#94A3B8', margin: 0 }}>
                   {d.text}
                 </p>
-                {d.teams.length > 0 && (
+                {d.teams?.length > 0 && (
                   <div style={{ display: 'flex', gap: 4, marginTop: 8 }}>
-                    {d.teams.map(t => (
+                    {d.teams.map((t: string) => (
                       <span key={t} style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, padding: '2px 6px', borderRadius: 2, background: '#1A1D27', color: '#94A3B8' }}>
                         {t}
                       </span>
@@ -345,7 +359,7 @@ export default function InsightsPage() {
                 </tr>
               </thead>
               <tbody>
-                {PREDICTION_LOG.map((p, i) => (
+                {predictionLogList.map((p: any, i: number) => (
                   <tr key={i} style={{ background: i % 2 === 0 ? '#0F1117' : '#050508', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                     <td style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, padding: '10px 16px', fontWeight: 500, color: '#F0F4F8', whiteSpace: 'nowrap' }}>{p.match}</td>
                     <td style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, padding: '10px 16px', color: '#94A3B8' }}>{p.prediction}</td>

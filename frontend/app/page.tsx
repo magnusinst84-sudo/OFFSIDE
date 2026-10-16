@@ -15,7 +15,7 @@ const BOOT_SEQUENCE: BootLine[] = [
   { text: 'Loading AI Models...', status: 'pending' },
   { text: 'Player Tracking Ready...', status: 'pending' },
   { text: 'Momentum Engine Online...', status: 'pending' },
-  { text: 'World Cup Intelligence Connected...', status: 'pending' },
+  { text: 'Global Football Intelligence Connected...', status: 'pending' },
   { text: 'OFFSIDE // READY', status: 'pending' },
 ]
 
@@ -272,7 +272,7 @@ export default function LandingPage() {
                 className="flex items-center gap-2 mb-6"
               >
                 <div style={{ width: 24, height: 1, background: '#00FF87' }} />
-                <span className="font-mono text-[11px] tracking-widest" style={{ color: '#00FF87' }}>WORLD CUP 2026 // AI INTELLIGENCE</span>
+                <span className="font-mono text-[11px] tracking-widest" style={{ color: '#00FF87' }}>GLOBAL FOOTBALL // AI INTELLIGENCE</span>
                 <div style={{ width: 24, height: 1, background: '#00FF87' }} />
               </motion.div>
 

@@ -74,13 +74,13 @@ function MatchesContent() {
       <div className="px-8 pt-8 pb-6" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="flex items-end justify-between">
           <div>
-            <p className="font-mono text-[10px] tracking-widest mb-1" style={{ color: '#6B7280' }}>WORLD CUP 2026</p>
+            <p className="font-mono text-[10px] tracking-widest mb-1" style={{ color: '#00FF87' }}>UCL • UEL • PREMIER LEAGUE • LA LIGA • BUNDESLIGA • SERIE A • LIGUE 1</p>
             <h1 style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: 28, fontWeight: 700, color: '#F0F4F8' }}>
               Match Explorer
             </h1>
           </div>
           <p className="font-mono text-[11px]" style={{ color: '#6B7280' }}>
-            Real-time via API-Football
+            Live European Intelligence
           </p>
         </div>
       </div>

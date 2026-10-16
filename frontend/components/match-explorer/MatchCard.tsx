@@ -71,10 +71,10 @@ export function MatchCard({ match, prediction, isLoading = false }: MatchCardPro
       </div>
 
       {/* Main score row */}
-      <div className="flex items-center justify-between px-4 py-1">
+      <div className="flex items-center justify-between px-4 py-1 gap-2">
         {/* Home team */}
-        <div className="flex items-center gap-2 flex-1">
-          <span className="font-mono text-[13px] font-medium" style={{ color: '#F0F4F8' }}>
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <span className="font-mono text-[13px] font-medium truncate" style={{ color: '#F0F4F8' }} title={match.home_team.name}>
             {match.home_team.name}
           </span>
           {isLive && (
@@ -83,7 +83,7 @@ export function MatchCard({ match, prediction, isLoading = false }: MatchCardPro
         </div>
 
         {/* Score */}
-        <div className="flex items-center gap-2 px-4">
+        <div className="flex items-center gap-2 px-2 flex-shrink-0">
           <span
             className="font-mono font-bold text-[36px] leading-none"
             style={{ color: isFinished ? 'rgba(240,244,248,0.6)' : '#F0F4F8' }}
@@ -100,11 +100,11 @@ export function MatchCard({ match, prediction, isLoading = false }: MatchCardPro
         </div>
 
         {/* Away team */}
-        <div className="flex items-center gap-2 flex-1 justify-end">
+        <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
           {isLive && (
             <MomentumRing score={100 - momentumScore} size={22} strokeWidth={2} animate={false} />
           )}
-          <span className="font-mono text-[13px] font-medium" style={{ color: '#F0F4F8' }}>
+          <span className="font-mono text-[13px] font-medium truncate text-right" style={{ color: '#F0F4F8' }} title={match.away_team.name}>
             {match.away_team.name}
           </span>
         </div>

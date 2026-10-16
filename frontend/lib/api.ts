@@ -41,6 +41,9 @@ export const getUpcomingMatches = () =>
 export const getFinishedMatches = () =>
   api.get('/api/matches/finished').then(r => r.data)
 
+export const getMatchDetail = (id: string) =>
+  api.get(`/api/matches/${id}`).then(r => r.data)
+
 export const getMatchStats = (id: string) =>
   api.get(`/api/matches/${id}/stats`).then(r => r.data)
 
@@ -67,6 +70,15 @@ export const askAnalyst = (payload: {
 }) => api.post('/api/commentary/ask', payload).then(r => r.data)
 
 // ─── Players ─────────────────────────────────────────
+export const getPlayers = () =>
+  api.get('/api/players').then(r => r.data)
+
+export const getPlayerById = (id: string | number) =>
+  api.get(`/api/players/${id}`).then(r => r.data)
+
+export const getPlayerDNA = (id: string | number) =>
+  api.post(`/api/players/${id}/dna`).then(r => r.data)
+
 export const searchPlayers = (q: string) =>
   api.get(`/api/players/search?q=${encodeURIComponent(q)}`).then(r => r.data)
 

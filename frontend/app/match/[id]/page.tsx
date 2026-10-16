@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { useApp } from '@/context/AppContext'
-import { useLiveMatch, usePrediction } from '@/hooks/useMatchData'
+import { useLiveMatch, usePrediction, useMatches } from '@/hooks/useMatchData'
 import { generateCommentary } from '@/lib/api'
 import type { CommentaryMessage, MomentumPoint, PersonalityType } from '@/lib/types'
 import { MatchHeader } from '@/components/war-room/MatchHeader'
@@ -13,8 +13,25 @@ import { AIPanel } from '@/components/war-room/AIPanel'
 export default function WarRoomPage() {
   const params = useParams()
   const id = params.id as string
-  const { currentMatch, personality, setPersonality, showToast } = useApp()
-  const { stats, events, lineups, isLoading } = useLiveMatch(id)
+  const { currentMatch, setCurrentMatch, personality, setPersonality, showToast } = useApp()
+  const { matches: liveMatches } = useMatches('live')
+  const { matches: upcomingMatches } = useMatches('upcoming')
+  const { matches: finishedMatches } = useMatches('finished')
+
+  const { stats, events, lineups, matchDetail, isLoading } = useLiveMatch(id)
+
+  // Direct access fallback if currentMatch is null on page refresh
+  useEffect(() => {
+    if (matchDetail) {
+      setCurrentMatch(matchDetail)
+    } else if (!currentMatch && id) {
+      const matchId = Number(id)
+      const found = [...liveMatches, ...upcomingMatches, ...finishedMatches].find(m => m.id === matchId)
+      if (found) {
+        setCurrentMatch(found)
+      }
+    }
+  }, [id, matchDetail, currentMatch, liveMatches, upcomingMatches, finishedMatches, setCurrentMatch])
   const { prediction } = usePrediction(
     currentMatch?.home_team.name ?? null,
     currentMatch?.away_team.name ?? null
