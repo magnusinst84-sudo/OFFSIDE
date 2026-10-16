@@ -82,10 +82,10 @@ export function MatchCard({ match, prediction, isLoading = false }: MatchCardPro
         <div className="flex items-center justify-center px-2 flex-shrink-0">
           {match.status === 'upcoming' ? (
             <div className="flex flex-col items-center">
-              <span className="font-mono text-[14px] font-semibold text-[#F0F4F8] tracking-tight">
+              <span suppressHydrationWarning className="font-mono text-[14px] font-semibold text-[#F0F4F8] tracking-tight">
                 {match.date ? new Date(match.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : 'TBD'}
               </span>
-              <span className="font-mono text-[10px] text-[#6B7280]">
+              <span suppressHydrationWarning className="font-mono text-[10px] text-[#6B7280]">
                 {match.date ? new Date(match.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
               </span>
             </div>

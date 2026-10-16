@@ -9,9 +9,16 @@ load_dotenv()
 
 app = FastAPI(title="OFFSIDE API", version="2.0.0", description="AI Football War Room Backend")
 
+cors_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+if os.getenv("FRONTEND_URL"):
+    cors_origins.extend([url.strip() for url in os.getenv("FRONTEND_URL").split(",")])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=cors_origins if os.getenv("ENVIRONMENT") == "production" and not os.getenv("ALLOW_ALL_CORS") else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
