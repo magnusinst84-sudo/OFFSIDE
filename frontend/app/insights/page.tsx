@@ -317,13 +317,13 @@ export default function InsightsPage() {
                     <td style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, padding: '10px 16px', color: '#94A3B8' }}>{r.team}</td>
                     <td style={{ padding: '10px 16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ height: 4, borderRadius: 2, width: `${r.impact * 10}%`, background: '#00FF87', minWidth: 4 }} />
-                        <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#00FF87' }}>{r.impact.toFixed(1)}</span>
+                        <div style={{ height: 4, borderRadius: 2, width: `${(r.impact ?? 0) * 10}%`, background: '#00FF87', minWidth: 4 }} />
+                        <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#00FF87' }}>{(r.impact ?? 0).toFixed(1)}</span>
                       </div>
                     </td>
-                    <td style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, padding: '10px 16px', color: '#94A3B8' }}>{r.xg.toFixed(1)}</td>
-                    <td style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, padding: '10px 16px', color: '#94A3B8' }}>{r.xa.toFixed(1)}</td>
-                    <td style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, padding: '10px 16px', color: '#94A3B8' }}>{r.momentum}</td>
+                    <td style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, padding: '10px 16px', color: '#94A3B8' }}>{(r.xg ?? 0).toFixed(1)}</td>
+                    <td style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, padding: '10px 16px', color: '#94A3B8' }}>{(r.xa ?? 0).toFixed(1)}</td>
+                    <td style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, padding: '10px 16px', color: '#94A3B8' }}>{r.momentum ?? '—'}</td>
                     <td style={{ padding: '10px 16px' }}>
                       <span
                         style={{
