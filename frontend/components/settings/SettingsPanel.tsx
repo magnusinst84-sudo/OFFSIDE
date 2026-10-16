@@ -11,13 +11,15 @@ const PERSONALITIES = ['broadcast', 'tactical', 'coach', 'fan'] as const
 function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
   return (
     <button
+      type="button"
       onClick={() => onChange(!value)}
-      className="relative transition-colors duration-200"
+      className="relative transition-colors duration-200 cursor-pointer focus:outline-none"
       style={{
-        width: 36,
-        height: 20,
-        borderRadius: 10,
-        background: value ? '#00FF87' : 'rgba(255,255,255,0.1)',
+        width: 40,
+        height: 22,
+        borderRadius: 11,
+        background: value ? '#00FF87' : '#1A1D27',
+        border: value ? '1px solid #00FF87' : '1px solid rgba(255,255,255,0.1)',
         flexShrink: 0,
       }}
     >
@@ -27,7 +29,7 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
           width: 16,
           height: 16,
           background: value ? '#050508' : '#6B7280',
-          transform: value ? 'translateX(18px)' : 'translateX(2px)',
+          transform: value ? 'translateX(20px)' : 'translateX(3px)',
         }}
       />
     </button>
@@ -37,6 +39,17 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
 export function SettingsPanel() {
   const { settingsPanelOpen, closeSettings } = useApp()
   const { settings, setSettings } = useSettings()
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && settingsPanelOpen) {
+        closeSettings()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [settingsPanelOpen, closeSettings])
 
   const update = <K extends keyof typeof settings>(key: K, val: typeof settings[K]) =>
     setSettings(prev => ({ ...prev, [key]: val }))
@@ -51,46 +64,53 @@ export function SettingsPanel() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[9999]"
-            style={{ background: 'rgba(5,5,8,0.7)', backdropFilter: 'blur(4px)' }}
+            style={{ background: 'rgba(5,5,8,0.75)', backdropFilter: 'blur(8px)' }}
             onClick={closeSettings}
           />
 
           {/* Panel */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+            initial={{ opacity: 0, scale: 0.96, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: 8 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-            className="fixed z-[10000]"
+            exit={{ opacity: 0, scale: 0.96, y: 12 }}
+            transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+            className="fixed z-[10000] flex flex-col"
             style={{
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
-              width: 640,
-              backdropFilter: 'blur(24px)',
-              background: 'rgba(15,17,23,0.92)',
+              width: 'min(640px, 94vw)',
+              maxHeight: '88vh',
+              background: '#0F1117',
               border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 24,
+              borderRadius: 16,
+              boxShadow: '0 24px 60px rgba(0,0,0,0.8), 0 0 1px rgba(0,255,135,0.15)',
               overflow: 'hidden',
             }}
           >
-            <div
-              className="overflow-y-auto"
-              style={{ maxHeight: '80vh', scrollbarWidth: 'thin', scrollbarColor: '#1A1D27 transparent' }}
-            >
             {/* Header */}
-            <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-              <span className="font-mono text-[11px] tracking-widest" style={{ color: '#94A3B8' }}>SYSTEM SETTINGS</span>
-              <button onClick={closeSettings} style={{ color: '#6B7280' }} className="hover:text-white transition-colors">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.06] bg-[#0F1117]/90 backdrop-blur-md flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#00FF87] animate-pulse" />
+                <span className="font-mono text-[12px] font-semibold tracking-widest text-[#F0F4F8]">SYSTEM SETTINGS</span>
+              </div>
+              <button
+                type="button"
+                onClick={closeSettings}
+                className="w-7 h-7 rounded-[4px] flex items-center justify-center text-[#6B7280] hover:text-[#F0F4F8] hover:bg-white/[0.06] transition-all cursor-pointer"
+                title="Close (Esc)"
+              >
                 <X size={16} />
               </button>
             </div>
 
-            <div className="p-6 flex flex-col gap-8">
-
+            <div
+              className="overflow-y-auto p-6 flex flex-col gap-7"
+              style={{ scrollbarWidth: 'thin', scrollbarColor: '#1A1D27 transparent' }}
+            >
               {/* Appearance */}
               <section>
-                <p className="font-mono text-[11px] tracking-widest mb-4" style={{ color: '#6B7280' }}>APPEARANCE</p>
+                <p className="font-mono text-[10px] tracking-widest mb-3 text-[#6B7280]">APPEARANCE</p>
                 {/* Theme */}
                 <div className="flex gap-3 mb-4">
                   {['dark', 'high-contrast'].map(theme => (
@@ -251,7 +271,6 @@ export function SettingsPanel() {
                 )}
               </section>
 
-            </div>
             </div>
           </motion.div>
         </>
