@@ -48,20 +48,33 @@ export default function WarRoomPage() {
 
   const { stats, events, lineups, matchDetail, isLoading } = useLiveMatch(id)
 
-  // Direct access fallback if currentMatch is null on hard refresh
+  const syncedMatchIdRef = useRef<string | null>(null)
+
+  // Direct access fallback if currentMatch is null on hard refresh — guarded by ref to run at most once per match id
   useEffect(() => {
-    if (matchDetail && currentMatch?.id !== matchDetail.id) {
-      setCurrentMatch(matchDetail)
+    if (syncedMatchIdRef.current === id) return
+
+    if (matchDetail && String(matchDetail.id) === String(id)) {
+      syncedMatchIdRef.current = id
+      if (currentMatch?.id !== matchDetail.id) {
+        setCurrentMatch(matchDetail)
+      }
     } else if (!currentMatch && id) {
       const matchId = Number(id)
       const found = [...liveMatches, ...upcomingMatches, ...finishedMatches].find(m => m.id === matchId)
       if (found) {
+        syncedMatchIdRef.current = id
         setCurrentMatch(found)
       }
     }
   }, [id, matchDetail, currentMatch?.id, liveMatches, upcomingMatches, finishedMatches, setCurrentMatch])
 
-  const activeMatch = currentMatch || matchDetail
+  const activeMatch =
+    (matchDetail && String(matchDetail.id) === String(id) ? matchDetail : null) ||
+    (currentMatch && String(currentMatch.id) === String(id) ? currentMatch : null) ||
+    [...liveMatches, ...upcomingMatches, ...finishedMatches].find(m => String(m.id) === String(id)) ||
+    matchDetail ||
+    currentMatch
 
   const { prediction } = usePrediction(
     activeMatch?.home_team?.name ?? null,

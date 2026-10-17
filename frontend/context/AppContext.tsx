@@ -1,5 +1,5 @@
 'use client'
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react'
+import React, { createContext, useContext, useReducer, useEffect, useCallback, useMemo, ReactNode } from 'react'
 import type { Match, PersonalityType, ConversationMessage } from '@/lib/types'
 
 interface AppState {
@@ -70,19 +70,19 @@ const AppContext = createContext<AppContextValue | null>(null)
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState)
 
-  const setCurrentMatch = (match: Match) => dispatch({ type: 'SET_MATCH', match })
-  const clearCurrentMatch = () => dispatch({ type: 'CLEAR_MATCH' })
-  const setPersonality = (personality: PersonalityType) => dispatch({ type: 'SET_PERSONALITY', personality })
-  const addMessage = (message: ConversationMessage) => dispatch({ type: 'ADD_MESSAGE', message })
-  const clearConversation = () => dispatch({ type: 'CLEAR_CONVERSATION' })
-  const openSettings = () => dispatch({ type: 'OPEN_SETTINGS' })
-  const closeSettings = () => dispatch({ type: 'CLOSE_SETTINGS' })
+  const setCurrentMatch = useCallback((match: Match) => dispatch({ type: 'SET_MATCH', match }), [])
+  const clearCurrentMatch = useCallback(() => dispatch({ type: 'CLEAR_MATCH' }), [])
+  const setPersonality = useCallback((personality: PersonalityType) => dispatch({ type: 'SET_PERSONALITY', personality }), [])
+  const addMessage = useCallback((message: ConversationMessage) => dispatch({ type: 'ADD_MESSAGE', message }), [])
+  const clearConversation = useCallback(() => dispatch({ type: 'CLEAR_CONVERSATION' }), [])
+  const openSettings = useCallback(() => dispatch({ type: 'OPEN_SETTINGS' }), [])
+  const closeSettings = useCallback(() => dispatch({ type: 'CLOSE_SETTINGS' }), [])
 
-  const showToast = (message: string, type: 'error' | 'info' | 'success' = 'info') => {
+  const showToast = useCallback((message: string, type: 'error' | 'info' | 'success' = 'info') => {
     const id = Math.random().toString(36).slice(2)
     dispatch({ type: 'ADD_TOAST', toast: { id, message, type } })
     setTimeout(() => dispatch({ type: 'REMOVE_TOAST', id }), 4000)
-  }
+  }, [])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -96,20 +96,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('keydown', handleKeydown)
   }, [])
 
+  const contextValue = useMemo(() => ({
+    ...state,
+    setCurrentMatch,
+    clearCurrentMatch,
+    setPersonality,
+    addMessage,
+    clearConversation,
+    openSettings,
+    closeSettings,
+    showToast,
+  }), [
+    state,
+    setCurrentMatch,
+    clearCurrentMatch,
+    setPersonality,
+    addMessage,
+    clearConversation,
+    openSettings,
+    closeSettings,
+    showToast,
+  ])
+
   return (
-    <AppContext.Provider
-      value={{
-        ...state,
-        setCurrentMatch,
-        clearCurrentMatch,
-        setPersonality,
-        addMessage,
-        clearConversation,
-        openSettings,
-        closeSettings,
-        showToast,
-      }}
-    >
+    <AppContext.Provider value={contextValue}>
       {children}
       {/* Toast container */}
       <div className="fixed top-4 right-4 z-[10001] flex flex-col gap-2 pointer-events-none">

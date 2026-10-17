@@ -511,6 +511,15 @@ async def get_match_detail(match_id: int):
         except Exception:
             pass
 
+    # Check cached fixture lists before falling back
+    for c_key in ["fixtures_1H-2H-ET-P-LIVE_top_tier_v5", "fixtures_NS_top_tier_v5", "fixtures_FT-AET-PEN_top_tier_v5"]:
+        c_list = get_cache(c_key)
+        if c_list and isinstance(c_list, list):
+            for m in c_list:
+                if m.get("id") == match_id:
+                    set_cache(cache_key, m, ttl_seconds=300)
+                    return m
+
     # Fallback to local mock matches if not found
     for m in MOCK_LIVE_MATCHES + MOCK_UPCOMING_MATCHES + MOCK_FINISHED_MATCHES:
         if m["id"] == match_id:
