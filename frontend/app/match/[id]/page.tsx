@@ -50,7 +50,7 @@ export default function WarRoomPage() {
 
   // Direct access fallback if currentMatch is null on hard refresh
   useEffect(() => {
-    if (matchDetail) {
+    if (matchDetail && currentMatch?.id !== matchDetail.id) {
       setCurrentMatch(matchDetail)
     } else if (!currentMatch && id) {
       const matchId = Number(id)
@@ -59,7 +59,7 @@ export default function WarRoomPage() {
         setCurrentMatch(found)
       }
     }
-  }, [id, matchDetail, currentMatch, liveMatches, upcomingMatches, finishedMatches, setCurrentMatch])
+  }, [id, matchDetail, currentMatch?.id, liveMatches, upcomingMatches, finishedMatches, setCurrentMatch])
 
   const activeMatch = currentMatch || matchDetail
 
