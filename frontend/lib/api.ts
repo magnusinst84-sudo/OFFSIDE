@@ -41,6 +41,9 @@ export const getUpcomingMatches = () =>
 export const getFinishedMatches = () =>
   api.get('/api/matches/finished').then(r => r.data)
 
+export const getMatches = (type: 'live' | 'upcoming' | 'finished' = 'live') =>
+  api.get(`/api/matches/${type}`).then(r => r.data)
+
 export const getMatchDetail = (id: string) =>
   api.get(`/api/matches/${id}`).then(r => r.data)
 

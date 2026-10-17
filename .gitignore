@@ -18,3 +18,5 @@ dist/
 media/*.mp4
 
 backend/offside_cache.db
+
+mockups/

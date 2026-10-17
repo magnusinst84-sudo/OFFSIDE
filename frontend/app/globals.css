@@ -1,44 +1,52 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 @import "tailwindcss";
 
-/* ─── CSS Custom Properties / Design Tokens ──────────── */
+/* ─── Design Tokens (UI.md §3) ──────────────────────── */
 :root {
   /* Surfaces */
-  --color-bg: #050508;
-  --color-surface-1: #0F1117;
-  --color-surface-2: #1A1D27;
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-border-subtle: rgba(255, 255, 255, 0.04);
+  --color-bg:           #050508;
+  --color-surface-1:    #0F1117;
+  --color-surface-2:    #1A1D27;
+  --color-border:       rgba(255,255,255,0.06);
+  --color-border-strong: rgba(255,255,255,0.12);
 
   /* Typography */
-  --color-text: #F0F4F8;
-  --color-text-muted: #94A3B8;
-  --color-text-faint: #6B7280;
+  --color-text:         #F0F4F8;
+  --color-text-muted:   #94A3B8;
+  --color-text-faint:   #6B7280;
 
   /* Brand & Actions */
-  --color-accent: #00FF87;
-  --accent: #00FF87;
+  --color-accent:      #00FF87;
+  --color-accent-soft: rgba(0,255,135,0.12);
+  --color-on-accent:   #050508;   /* text on solid accent button */
 
-  /* Strict Semantic Team & State Colors */
-  --color-home: #38BDF8;      /* Team A (Electric Sky Cyan) */
-  --color-away: #F43F5E;      /* Team B (Vibrant Coral/Rose) */
-  --color-draw: #64748B;      /* Draw / Neutral Gray */
-  --color-live: #EF4444;      /* Live red status indicator */
-  --color-warn: #F59E0B;      /* Upset alert & caution amber */
-  --color-success: #10B981;   /* Correct outcome */
-  --color-danger: #F43F5E;    /* Incorrect outcome */
+  /* Team & State — NEVER changed by accent swatch */
+  --color-home:        #38BDF8;
+  --color-away:        #F43F5E;
+  --color-draw:        #64748B;
+  --color-live:        #EF4444;
+  --color-ai:          #7C3AED;
+  --color-warn:        #F59E0B;
+  --color-success:     #22C55E;
+  --color-danger:      #EF4444;
 
-  /* Legacy aliases for backward compatibility */
-  --bg-black: #050508;
-  --bg-primary: #0F1117;
-  --bg-secondary: #1A1D27;
-  --momentum-green: #00FF87;
-  --pressure-red: #EF4444;
-  --electric-blue: #38BDF8;
-  --chalk-white: #F0F4F8;
-  --muted-gray: #94A3B8;
-  --cool-gray: #6B7280;
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  /* Legacy aliases — kept for backward compat with old components */
+  --bg-black:        var(--color-bg);
+  --bg-primary:      var(--color-surface-1);
+  --bg-secondary:    var(--color-surface-2);
+  --accent:          var(--color-accent);
+  --momentum-green:  #00FF87;
+  --pressure-red:    #EF4444;
+  --electric-blue:   #38BDF8;
+  --chalk-white:     #F0F4F8;
+  --muted-gray:      #94A3B8;
+  --cool-gray:       #6B7280;
 }
 
 /* ─── Base Reset ────────────────────────────────────── */
@@ -51,64 +59,59 @@
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-size: 14px;
+  font-size: 16px;   /* raised from 14 so 1rem = 16px as per spec */
   scroll-behavior: smooth;
   width: 100%;
 }
 
 body {
-  background: var(--bg-black);
-  color: var(--chalk-white);
+  background: var(--color-bg);
+  color: var(--color-text);
   font-family: 'Inter', -apple-system, sans-serif;
-  min-height: 100vh;
+  font-size: 14px;
+  min-height: 100dvh;
   width: 100%;
   overflow-x: hidden;
 }
 
-/* ─── Typography ────────────────────────────────────── */
-.font-display {
-  font-family: 'Space Grotesk', sans-serif;
-}
+/* ─── Typography helpers ────────────────────────────── */
+.font-display { font-family: 'Space Grotesk', sans-serif; }
+.font-mono, code, pre, kbd { font-family: 'IBM Plex Mono', 'Courier New', monospace; }
 
-.font-mono, code, pre, kbd {
-  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+/* ─── Scrollbars (UI.md §3) ─────────────────────────── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.16) transparent;
 }
-
-/* ─── Scrollbar ─────────────────────────────────────── */
-::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
+::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb {
-  background: var(--bg-secondary);
-  border-radius: 2px;
+  background: rgba(255,255,255,.14);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ─── Autofill override (UI.md §3) ─────────────────── */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--color-text);
+  caret-color: var(--color-text);
+  box-shadow: 0 0 0 1000px var(--color-surface-1) inset;
+  transition: background-color 9999s ease-out 0s;
+}
+
+/* ─── Selection ─────────────────────────────────────── */
+::selection {
+  background: rgba(0,255,135,0.2);
+  color: var(--color-text);
 }
 
 /* ─── Keyframe Animations ───────────────────────────── */
 @keyframes livePulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.5; transform: scale(0.9); }
-}
-
-@keyframes momentumBreathe {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.02); }
-}
-
-@keyframes goalBurst {
-  0% { transform: scale(1); }
-  30% { transform: scale(1.15); }
-  100% { transform: scale(1); }
-}
-
-@keyframes terminalBlink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
 }
 
 @keyframes fadeInUp {
@@ -121,76 +124,68 @@ body {
   to { transform: rotate(360deg); }
 }
 
-@keyframes particleDrift {
-  0% { transform: translateY(0px) translateX(0px); opacity: 0.3; }
-  50% { opacity: 0.7; }
-  100% { transform: translateY(-60px) translateX(20px); opacity: 0; }
-}
-
-@keyframes drawLine {
-  from { stroke-dashoffset: 1000; }
-  to { stroke-dashoffset: 0; }
-}
-
-@keyframes counterUp {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
 
-/* ─── Utility Classes ───────────────────────────────── */
-.animate-fade-in-up {
-  animation: fadeInUp 0.3s ease-out forwards;
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.animate-radar {
-  animation: radarSweep 4s linear infinite;
+/* ─── Utility animations ────────────────────────────── */
+.animate-fade-in-up { animation: fadeInUp 0.3s ease-out forwards; }
+.animate-radar { animation: radarSweep 4s linear infinite; }
+.animate-live { animation: livePulse 1.4s ease-in-out infinite; }
+.animate-slide-up { animation: slideUp 0.25s ease-out forwards; }
+
+/* ─── Card — section 4 spec ─────────────────────────── */
+/* No border by default; hairline appears on hover if interactive */
+.card-base {
+  background: var(--color-surface-1);
+  border-radius: var(--radius-md);
+  padding: 24px;
+}
+.card-interactive {
+  background: var(--color-surface-1);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.card-interactive:hover {
+  background: var(--color-surface-2);
+  border-color: var(--color-border-strong);
 }
 
-.animate-live {
-  animation: livePulse 1.4s ease-in-out infinite;
-}
+/* ─── Hairline divider ──────────────────────────────── */
+.hairline { height: 1px; background: var(--color-border); }
 
-.animate-breathe {
-  animation: momentumBreathe 3s ease-in-out infinite;
+/* ─── Chip horizontal scroll (edge fade) ───────────── */
+.chip-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0px,
+    black 16px,
+    black calc(100% - 16px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0px,
+    black 16px,
+    black calc(100% - 16px),
+    transparent 100%
+  );
 }
-
-/* ─── Card Base ─────────────────────────────────────── */
-.card {
-  background: var(--bg-primary);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 4px;
-}
-
-.card:hover {
-  background: var(--bg-secondary);
-}
-
-/* ─── Glassmorphism ─────────────────────────────────── */
-.glass {
-  backdrop-filter: blur(8px);
-  background: rgba(15, 17, 23, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-/* ─── Dividers ──────────────────────────────────────── */
-.divider {
-  height: 1px;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-/* ─── IBM Plex Mono labels ──────────────────────────── */
-.label {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted-gray);
-}
+.chip-scroll::-webkit-scrollbar { display: none; }
 
 /* ─── Reduced motion ────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
@@ -201,8 +196,14 @@ body {
   }
 }
 
-/* ─── Selection ─────────────────────────────────────── */
-::selection {
-  background: rgba(0, 255, 135, 0.2);
-  color: var(--chalk-white);
+/* ─── Bottom sheet on mobile ────────────────────────── */
+.bottom-sheet {
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+
+/* ─── Focus ring ────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }

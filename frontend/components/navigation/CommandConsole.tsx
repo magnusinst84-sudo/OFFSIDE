@@ -1,66 +1,60 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  LayoutDashboard, Calendar, Radio, Users, Bot, TrendingUp, Settings, UserCheck, Shield
-} from 'lucide-react'
-import { useApp } from '@/context/AppContext'
-import { useAuth } from '@/context/AuthContext'
+import { Home, Calendar, Users, Bot, TrendingUp } from 'lucide-react'
 import { SPRING } from '@/lib/constants'
 
+/* 5 items only — Settings and Account live in AppHeader (UI.md §5.8) */
 const NAV_ITEMS = [
-  { id: 'command', label: 'Command', Icon: LayoutDashboard, href: '/' },
-  { id: 'matches', label: 'Matches', Icon: Calendar, href: '/matches' },
-  { id: 'live', label: 'Live', Icon: Radio, href: '/matches?tab=live' },
-  { id: 'players', label: 'Players', Icon: Users, href: '/players' },
-  { id: 'ai', label: 'AI Center', Icon: Bot, href: '/ai' },
-  { id: 'insights', label: 'Insights', Icon: TrendingUp, href: '/insights' },
-  { id: 'settings', label: 'Settings', Icon: Settings, href: '/settings' },
-]
+  { id: 'home',     label: 'Home',     Icon: Home,        href: '/',        key: 'H' },
+  { id: 'matches',  label: 'Matches',  Icon: Calendar,    href: '/matches', key: 'M' },
+  { id: 'players',  label: 'Players',  Icon: Users,       href: '/players', key: 'P' },
+  { id: 'ai',       label: 'AI',       Icon: Bot,         href: '/ai',      key: 'A' },
+  { id: 'insights', label: 'Insights', Icon: TrendingUp,  href: '/insights',key: 'I' },
+] as const
+
+type NavId = typeof NAV_ITEMS[number]['id']
+
+function getActiveId(pathname: string): NavId {
+  if (pathname === '/') return 'home'
+  if (pathname.startsWith('/match')) return 'matches'
+  if (pathname.startsWith('/player')) return 'players'
+  if (pathname.startsWith('/ai')) return 'ai'
+  if (pathname.startsWith('/insights')) return 'insights'
+  return 'home'
+}
 
 export function CommandConsole() {
   const router = useRouter()
   const pathname = usePathname()
-  const { openSettings } = useApp()
-  const { user, openAuthModal, logout } = useAuth()
-  const [hoveredId, setHoveredId] = useState<string | null>(null)
+  const [hoveredId, setHoveredId] = useState<NavId | null>(null)
+  const activeId = getActiveId(pathname)
 
-  const getActiveId = () => {
-    if (pathname === '/') return 'command'
-    if (pathname.startsWith('/match')) return 'matches'
-    if (pathname.startsWith('/player')) return 'players'
-    if (pathname.startsWith('/ai')) return 'ai'
-    if (pathname.startsWith('/insights')) return 'insights'
-    if (pathname.startsWith('/settings')) return 'settings'
-    return 'command'
-  }
-
-  const activeId = getActiveId()
-
-  const handleClick = (item: typeof NAV_ITEMS[0]) => {
-    if (item.id === 'settings') {
-      openSettings()
-      return
+  /* Keyboard shortcuts (desktop only) */
+  useEffect(() => {
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      const item = NAV_ITEMS.find(n => n.key.toLowerCase() === e.key.toLowerCase())
+      if (item) router.push(item.href)
     }
-    if (!user && item.href !== '/') {
-      openAuthModal()
-      return
-    }
-    router.push(item.href)
-  }
+    window.addEventListener('keydown', handleKeydown)
+    return () => window.removeEventListener('keydown', handleKeydown)
+  }, [router])
 
-  return (
+  /* ── Desktop floating pill dock ── */
+  const DesktopDock = (
     <nav
       aria-label="Primary Navigation"
-      className="fixed bottom-3 sm:bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-0.5 sm:gap-1 px-2 sm:px-4 max-w-[96vw] overflow-x-auto"
+      className="hidden md:flex fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] items-center gap-0.5 px-2"
       style={{
-        height: 50,
-        background: 'rgba(15,17,23,0.85)',
+        height: 52,
+        background: 'rgba(15,17,23,0.90)',
         backdropFilter: 'blur(20px)',
-        border: '1px solid rgba(0,255,135,0.08)',
+        border: '1px solid rgba(255,255,255,0.06)',
         borderRadius: 999,
-        boxShadow: '0 8px 32px rgba(0,255,135,0.08)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
       }}
     >
       {NAV_ITEMS.map(item => {
@@ -70,84 +64,152 @@ export function CommandConsole() {
         return (
           <div
             key={item.id}
-            className="relative flex flex-col items-center justify-center cursor-pointer"
-            style={{ width: 44, height: 44 }}
+            className="relative flex items-center justify-center cursor-pointer"
+            style={{ borderRadius: 999 }}
             onMouseEnter={() => setHoveredId(item.id)}
             onMouseLeave={() => setHoveredId(null)}
-            onClick={() => handleClick(item)}
+            onClick={() => router.push(item.href)}
           >
-            {/* Active pill */}
-            {isActive && (
+            {/* Active / hover background */}
+            {(isActive || isHovered) && (
               <motion.div
-                layoutId="activePill"
+                layoutId={isActive ? 'activePill' : undefined}
                 className="absolute inset-0 rounded-full"
-                style={{ background: 'rgba(0,255,135,0.12)' }}
+                style={{ background: isActive ? 'rgba(0,255,135,0.12)' : 'rgba(255,255,255,0.04)' }}
                 transition={{ type: 'spring', ...SPRING }}
               />
             )}
 
-            {/* Icon */}
             <motion.div
-              animate={{ y: isHovered ? -2 : 0 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-              className="relative z-10 flex flex-col items-center"
+              animate={{ x: 0 }}
+              className="relative z-10 flex items-center gap-1.5 overflow-hidden"
+              style={{
+                paddingInline: isActive ? 14 : 12,
+                paddingBlock: 10,
+                borderRadius: 999,
+              }}
             >
               <item.Icon
                 size={18}
+                aria-label={item.label}
                 style={{
                   color: isActive ? '#00FF87' : isHovered ? '#F0F4F8' : '#6B7280',
-                  strokeWidth: 1.5,
+                  strokeWidth: 1.8,
+                  flexShrink: 0,
                   transition: 'color 0.15s',
                 }}
               />
+              {/* Label only on active item */}
+              <AnimatePresence initial={false}>
+                {isActive && (
+                  <motion.span
+                    key="label"
+                    initial={{ width: 0, opacity: 0 }}
+                    animate={{ width: 'auto', opacity: 1 }}
+                    exit={{ width: 0, opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: '#00FF87',
+                      fontFamily: 'Inter, sans-serif',
+                      overflow: 'hidden',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {item.label}
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </motion.div>
 
-            {/* Hover tooltip */}
+            {/* Hover tooltip (only when not active, only on hover) */}
             <AnimatePresence>
-              {isHovered && (
+              {isHovered && !isActive && (
                 <motion.div
-                  initial={{ opacity: 0, y: 4, scale: 0.92 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 4, scale: 0.92 }}
-                  transition={{ duration: 0.12 }}
-                  className="absolute font-mono text-[11px] font-semibold tracking-wider pointer-events-none px-2.5 py-1 rounded-[4px] bg-[#0F1117] border border-white/[0.1] shadow-lg z-50 flex items-center gap-1.5"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 4 }}
+                  transition={{ duration: 0.1 }}
+                  className="absolute pointer-events-none px-2.5 py-1 rounded-lg text-xs font-medium z-50"
                   style={{
-                    color: isActive ? '#00FF87' : '#F0F4F8',
                     top: -36,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
                     whiteSpace: 'nowrap',
+                    background: 'var(--color-surface-1)',
+                    border: '1px solid var(--color-border)',
+                    color: 'var(--color-text-muted)',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                    fontSize: 12,
                   }}
                 >
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: isActive ? '#00FF87' : '#6B7280' }} />
                   {item.label}
+                  <span style={{ color: 'var(--color-text-faint)', marginLeft: 4 }}>
+                    [{item.key}]
+                  </span>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
         )
       })}
-
-      {/* Operator Clearance Action */}
-      <div className="h-5 w-[1px] bg-white/10 mx-1 flex-shrink-0" />
-      <div
-        className="relative flex items-center justify-center cursor-pointer flex-shrink-0"
-        style={{ width: 40, height: 40 }}
-        onClick={user ? logout : openAuthModal}
-        title={user ? `Signed in as ${user.email} (Click to Sign Out)` : 'Operator Clearance (Sign In)'}
-      >
-        <div
-          className="w-7 h-7 rounded-full flex items-center justify-center border transition-all"
-          style={{
-            background: user ? 'rgba(0,255,135,0.1)' : 'rgba(255,255,255,0.05)',
-            borderColor: user ? '#00FF87' : 'rgba(255,255,255,0.15)',
-          }}
-        >
-          {user ? (
-            <UserCheck size={14} className="text-[#00FF87]" />
-          ) : (
-            <Shield size={13} className="text-gray-400" />
-          )}
-        </div>
-      </div>
     </nav>
+  )
+
+  /* ── Mobile bottom tab bar (below 768px) ── */
+  const MobileTabBar = (
+    <nav
+      aria-label="Primary Navigation"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-[9999] flex items-stretch"
+      style={{
+        height: `calc(64px + env(safe-area-inset-bottom, 0px))`,
+        background: 'rgba(15,17,23,0.96)',
+        backdropFilter: 'blur(20px)',
+        borderTop: '1px solid rgba(255,255,255,0.06)',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+      }}
+    >
+      {NAV_ITEMS.map(item => {
+        const isActive = activeId === item.id
+        return (
+          <button
+            key={item.id}
+            onClick={() => router.push(item.href)}
+            className="flex-1 flex flex-col items-center justify-center gap-1 cursor-pointer transition-opacity"
+            aria-label={item.label}
+            aria-current={isActive ? 'page' : undefined}
+            style={{ minHeight: 44 }}
+          >
+            <item.Icon
+              size={22}
+              style={{
+                color: isActive ? 'var(--color-accent)' : '#6B7280',
+                strokeWidth: 1.8,
+                transition: 'color 0.15s',
+              }}
+            />
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: isActive ? 600 : 400,
+                color: isActive ? 'var(--color-accent)' : '#6B7280',
+                fontFamily: 'Inter, sans-serif',
+                transition: 'color 0.15s',
+              }}
+            >
+              {item.label}
+            </span>
+          </button>
+        )
+      })}
+    </nav>
+  )
+
+  return (
+    <>
+      {DesktopDock}
+      {MobileTabBar}
+    </>
   )
 }
