@@ -6,29 +6,48 @@ from typing import Optional
 router = APIRouter()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+
+# Priority hierarchy:
+# 1. Primary: Live API models (Gemini 3 Flash Live, Gemini 3.8 Live)
+# 2. Secondary Fallback: Standard text-out models (Gemini 3 Flash, Gemini 3.8 Flash)
+GEMINI_MODELS = [
+    # --- Live API Models (Primary) ---
+    "gemini-3-flash-live",
+    "gemini-3.8-live",
+    # --- Standard Flash Models (Fallback) ---
+    "gemini-3-flash",
+    "gemini-3.8-flash",
+    "gemini-flash-latest",
+]
 
 async def call_gemini(prompt: str) -> Optional[str]:
     if not GEMINI_API_KEY:
         return None
-    url = f"{GEMINI_API_URL}?key={GEMINI_API_KEY}"
+
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"temperature": 0.7, "maxOutputTokens": 300}
     }
-    try:
-        async with httpx.AsyncClient(timeout=12.0) as client:
-            r = await client.post(url, json=payload)
-            if r.status_code == 200:
-                data = r.json()
-                candidates = data.get("candidates", [])
-                if candidates:
-                    parts = candidates[0].get("content", {}).get("parts", [])
-                    if parts:
-                        return parts[0].get("text", "").strip()
-            print(f"[commentary] Gemini HTTP {r.status_code}: {r.text[:200]}")
-    except Exception as e:
-        print(f"[commentary] Gemini call exception: {e}")
+
+    async with httpx.AsyncClient(timeout=8.0) as client:
+        # Cascade through candidate models in priority order:
+        # Live models first -> Standard Flash models if live fails
+        for model in GEMINI_MODELS:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}"
+            try:
+                r = await client.post(url, json=payload)
+                if r.status_code == 200:
+                    data = r.json()
+                    candidates = data.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if parts:
+                            return parts[0].get("text", "").strip()
+                print(f"[commentary] Model '{model}' HTTP {r.status_code}: {r.text[:150]}")
+            except Exception as e:
+                print(f"[commentary] Error trying '{model}': {e}")
+                continue
+
     return None
 
 PERSONALITY_PROMPTS = {

@@ -29,7 +29,7 @@ export const useLiveMatch = (matchId: string | null) => {
     stats,
     events: eventsData?.events ?? [],
     lineups,
-    isLoading: !stats && !statsError,
+    isLoading: !matchDetail && !stats && !statsError,
     error: statsError,
   }
 }

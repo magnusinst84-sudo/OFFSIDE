@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 import os, httpx, asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 from cache_db import get_cache, set_cache
 
 from dotenv import load_dotenv
@@ -354,7 +354,7 @@ async def fetch_fixtures(status: str):
     if not headers.get("x-apisports-key"):
         return []
     
-    cache_key = f"fixtures_{status}_top_tier_v3"
+    cache_key = f"fixtures_{status}_top_tier_v5"
     # TTL: 45 seconds for live matches, 10 minutes for upcoming/finished
     ttl = 45 if status == "1H-2H-ET-P-LIVE" else 600
     cached = get_cache(cache_key)
@@ -372,34 +372,79 @@ async def fetch_fixtures(status: str):
                 # Strictly filter to top European competitions (UCL, UEL, UECL, Big 5 & cups)
                 fixtures = [f for f in all_live if is_top_flight(f)]
             elif status == "NS":
-                r = await client.get(f"{API_FOOTBALL_BASE}/fixtures", headers=headers, params={"date": today_str, "status": "NS"})
-                data = r.json() if r.status_code == 200 else {}
-                day_fixtures = data.get("response", [])
-                top_today = [f for f in day_fixtures if is_top_flight(f)]
-                if top_today:
-                    fixtures = top_today
-                else:
-                    # Query upcoming top league games
+                # Fetch upcoming matches for today and tomorrow (next 1-2 days)
+                day1_str = today_str
+                day2_str = (datetime.utcnow() + timedelta(days=1)).strftime("%Y-%m-%d")
+                day3_str = (datetime.utcnow() + timedelta(days=2)).strftime("%Y-%m-%d")
+                
+                now = datetime.utcnow()
+                cutoff_48h = now + timedelta(hours=48)
+
+                collected = []
+                # Check date range today -> +2 days
+                for d_str in [day1_str, day2_str, day3_str]:
+                    r = await client.get(f"{API_FOOTBALL_BASE}/fixtures", headers=headers, params={"date": d_str, "status": "NS"})
+                    if r.status_code == 200:
+                        day_res = r.json().get("response", [])
+                        top_fixtures = [f for f in day_res if is_top_flight(f)]
+                        collected.extend(top_fixtures)
+
+                # Fallback to 'next' endpoint if the daily calendar returned no top flight games
+                if not collected:
                     r_next = await client.get(f"{API_FOOTBALL_BASE}/fixtures", headers=headers, params={"next": 50})
                     next_resp = r_next.json().get("response", []) if r_next.status_code == 200 else []
-                    top_next = [f for f in next_resp if is_top_flight(f)]
-                    fixtures = top_next
+                    collected = [f for f in next_resp if is_top_flight(f)]
+
+                # Strictly keep only matches within the next 48 hours (1-2 days)
+                valid_fixtures = []
+                for f in collected:
+                    match_date_str = f.get("fixture", {}).get("date")
+                    if match_date_str:
+                        try:
+                            # Normalize ISO timestamp
+                            clean_str = match_date_str.replace("Z", "+00:00")
+                            m_dt = datetime.fromisoformat(clean_str).replace(tzinfo=None)
+                            if now - timedelta(hours=2) <= m_dt <= cutoff_48h:
+                                valid_fixtures.append(f)
+                        except Exception:
+                            valid_fixtures.append(f)
+                    else:
+                        valid_fixtures.append(f)
+
+                # Sort chronologically by date
+                valid_fixtures.sort(key=lambda x: x.get("fixture", {}).get("date", ""))
+                fixtures = valid_fixtures
             else:
-                r = await client.get(f"{API_FOOTBALL_BASE}/fixtures", headers=headers, params={"date": today_str, "status": "FT"})
-                data = r.json() if r.status_code == 200 else {}
-                day_fixtures = data.get("response", [])
-                top_today = [f for f in day_fixtures if is_top_flight(f)]
-                if top_today:
-                    fixtures = top_today
-                else:
-                    # Query recently finished top league matches
-                    r_last = await client.get(f"{API_FOOTBALL_BASE}/fixtures", headers=headers, params={"last": 50})
-                    last_resp = r_last.json().get("response", []) if r_last.status_code == 200 else []
-                    top_last = [f for f in last_resp if is_top_flight(f)]
-                    fixtures = top_last
+                # Finished matches: past 1 week (7 days)
+                one_week_ago = datetime.utcnow() - timedelta(days=7)
+                now = datetime.utcnow()
+
+                # Query recently finished matches
+                r_last = await client.get(f"{API_FOOTBALL_BASE}/fixtures", headers=headers, params={"last": 70})
+                last_resp = r_last.json().get("response", []) if r_last.status_code == 200 else []
+                top_last = [f for f in last_resp if is_top_flight(f)]
+
+                # Filter strictly to matches played within the last 7 days
+                valid_finished = []
+                for f in top_last:
+                    match_date_str = f.get("fixture", {}).get("date")
+                    if match_date_str:
+                        try:
+                            clean_str = match_date_str.replace("Z", "+00:00")
+                            m_dt = datetime.fromisoformat(clean_str).replace(tzinfo=None)
+                            if one_week_ago <= m_dt <= now + timedelta(hours=2):
+                                valid_finished.append(f)
+                        except Exception:
+                            valid_finished.append(f)
+                    else:
+                        valid_finished.append(f)
+
+                # Sort by date descending (most recently finished matches first)
+                valid_finished.sort(key=lambda x: x.get("fixture", {}).get("date", ""), reverse=True)
+                fixtures = valid_finished
 
             formatted = [fmt_match(f) for f in fixtures][:25]
-            if formatted:
+            if formatted is not None:
                 set_cache(cache_key, formatted, ttl_seconds=ttl)
             return formatted
         except Exception as e:
@@ -415,8 +460,6 @@ async def get_live_matches():
     if is_mock_mode():
         return {"matches": MOCK_LIVE_MATCHES, "count": len(MOCK_LIVE_MATCHES), "source": "mock"}
     matches = await fetch_fixtures("1H-2H-ET-P-LIVE")
-    if not matches:
-        return {"matches": MOCK_LIVE_MATCHES, "count": len(MOCK_LIVE_MATCHES), "source": "mock_fallback"}
     return {"matches": matches, "count": len(matches), "source": "live"}
 
 @router.get("/upcoming")
@@ -424,8 +467,6 @@ async def get_upcoming_matches():
     if is_mock_mode():
         return {"matches": MOCK_UPCOMING_MATCHES, "count": len(MOCK_UPCOMING_MATCHES), "source": "mock"}
     matches = await fetch_fixtures("NS")
-    if not matches:
-        return {"matches": MOCK_UPCOMING_MATCHES, "count": len(MOCK_UPCOMING_MATCHES), "source": "mock_fallback"}
     return {"matches": matches, "count": len(matches), "source": "live"}
 
 @router.get("/finished")
@@ -433,8 +474,6 @@ async def get_finished_matches():
     if is_mock_mode():
         return {"matches": MOCK_FINISHED_MATCHES, "count": len(MOCK_FINISHED_MATCHES), "source": "mock"}
     matches = await fetch_fixtures("FT-AET-PEN")
-    if not matches:
-        return {"matches": MOCK_FINISHED_MATCHES, "count": len(MOCK_FINISHED_MATCHES), "source": "mock_fallback"}
     return {"matches": matches, "count": len(matches), "source": "live"}
 
 @router.get("/{match_id}")

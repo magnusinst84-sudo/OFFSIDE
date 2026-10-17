@@ -39,7 +39,7 @@ function MatchGrid({ tab }: { tab: 'live' | 'upcoming' | 'finished' }) {
     return (
       <div className="flex flex-col items-center justify-center py-20 px-4 rounded-[6px] border border-white/[0.06] bg-[#0F1117] gap-3">
         <span className="font-mono text-[12px] font-semibold tracking-widest text-[#00FF87]">
-          NO {tab.toUpperCase()} MATCHES IN PROGRESS
+          {tab === 'live' ? 'NO LIVE MATCHES IN PROGRESS' : `NO ${tab.toUpperCase()} MATCHES FOUND`}
         </span>
         <span className="text-[13px] text-[#94A3B8] font-normal text-center max-w-md">
           {tab === 'live'

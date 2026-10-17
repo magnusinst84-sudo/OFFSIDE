@@ -32,9 +32,12 @@ export default function WarRoomPage() {
       }
     }
   }, [id, matchDetail, currentMatch, liveMatches, upcomingMatches, finishedMatches, setCurrentMatch])
+
+  const activeMatch = currentMatch || matchDetail
+
   const { prediction } = usePrediction(
-    currentMatch?.home_team.name ?? null,
-    currentMatch?.away_team.name ?? null
+    activeMatch?.home_team.name ?? null,
+    activeMatch?.away_team.name ?? null
   )
 
   const [commentary, setCommentary] = useState<CommentaryMessage[]>([])
@@ -44,30 +47,30 @@ export default function WarRoomPage() {
 
   // Build momentum history from prediction polls
   useEffect(() => {
-    if (prediction && currentMatch?.minute) {
+    if (prediction && activeMatch?.minute) {
       setMomentumHistory(prev => {
         const score = prediction.momentum_score ?? 50
         const last = prev[prev.length - 1]
-        if (last?.minute === currentMatch.minute) return prev
+        if (last?.minute === activeMatch.minute) return prev
         return [...prev.slice(-89), {
-          minute: currentMatch.minute!,
+          minute: activeMatch.minute!,
           home: score,
           away: 100 - score,
         }]
       })
     }
-  }, [prediction, currentMatch?.minute])
+  }, [prediction, activeMatch?.minute])
 
   // Initial commentary on load
   useEffect(() => {
-    if (!currentMatch || !prediction || commentary.length > 0) return
+    if (!activeMatch || !prediction || commentary.length > 0) return
     setCommentaryLoading(true)
     generateCommentary({
       match_id: Number(id),
       event_type: 'tactical',
       match_state: {
-        home: currentMatch.home_team.name,
-        away: currentMatch.away_team.name,
+        home: activeMatch.home_team.name,
+        away: activeMatch.away_team.name,
         stats,
         prediction,
       },
@@ -86,7 +89,7 @@ export default function WarRoomPage() {
       showToast('Tactical engine offline — retrying', 'error')
       setCommentaryLoading(false)
     })
-  }, [currentMatch, prediction])
+  }, [activeMatch, prediction])
 
   // Detect new events and generate commentary
   useEffect(() => {
@@ -101,8 +104,8 @@ export default function WarRoomPage() {
       match_id: Number(id),
       event_type: newEvent.type,
       match_state: {
-        home: currentMatch?.home_team.name,
-        away: currentMatch?.away_team.name,
+        home: activeMatch?.home_team.name,
+        away: activeMatch?.away_team.name,
         stats,
         prediction,
       },
@@ -117,7 +120,7 @@ export default function WarRoomPage() {
         event_type: msg.event_type,
       }])
     }).catch(() => {})
-  }, [events])
+  }, [events, activeMatch])
 
   const handlePersonalityChange = async (p: PersonalityType) => {
     setPersonality(p)
@@ -125,7 +128,7 @@ export default function WarRoomPage() {
       const msg = await generateCommentary({
         match_id: Number(id),
         event_type: 'tactical',
-        match_state: { home: currentMatch?.home_team.name, away: currentMatch?.away_team.name, stats, prediction },
+        match_state: { home: activeMatch?.home_team.name, away: activeMatch?.away_team.name, stats, prediction },
         personality: p,
         event_detail: `Analyst switch to ${p} mode`,
       })
@@ -144,7 +147,7 @@ export default function WarRoomPage() {
   return (
     <div className="flex flex-col h-screen max-h-screen overflow-hidden pb-20 md:pb-24 w-full" style={{ background: '#050508' }}>
       {/* Top bar */}
-      <MatchHeader match={currentMatch} prediction={prediction} isLoading={isLoading && !currentMatch} />
+      <MatchHeader match={activeMatch} prediction={prediction} isLoading={isLoading && !activeMatch} />
 
       {/* Mobile view selector (hidden on lg+) */}
       <div className="flex lg:hidden items-center justify-center gap-2 p-2 border-b border-white/[0.06] bg-[#0F1117] flex-shrink-0">
@@ -183,7 +186,7 @@ export default function WarRoomPage() {
               stats={stats}
               prediction={prediction}
               momentumHistory={momentumHistory}
-              currentMinute={currentMatch?.minute ?? undefined}
+              currentMinute={activeMatch?.minute ?? undefined}
               isLoading={isLoading}
             />
           </div>
@@ -198,7 +201,7 @@ export default function WarRoomPage() {
           <PitchVisualization
             lineups={lineups}
             events={events}
-            currentMinute={currentMatch?.minute ?? undefined}
+            currentMinute={activeMatch?.minute ?? undefined}
           />
         </div>
 
