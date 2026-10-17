@@ -1,6 +1,6 @@
 # OFFSIDE — AI Football Intelligence & Live Tactical War Room
 
-**OFFSIDE** is an elite, AI-augmented football intelligence, live war room, and predictive analytics platform engineered for modern football. It combines real-time match momentum tracking, an Elo-backed XGBoost predictive machine learning engine, multi-personality AI tactical commentary via Google Gemini 2.5 Flash, and holographic player DNA scouting profiles.
+**OFFSIDE** is an elite, AI-augmented football intelligence, live war room, and predictive analytics platform engineered for modern football. It combines real-time match momentum tracking, an Elo-backed XGBoost predictive machine learning engine, multi-personality AI tactical commentary via Google Gemini 3 Flash Live & Gemini 3.8 Live, and holographic player DNA scouting profiles.
 
 ---
 
@@ -26,7 +26,7 @@ OFFSIDE Platform
 └── Backend (FastAPI + Python 3.11+)
     ├── routers/
     │   ├── predict.py             XGBoost win-probability & momentum calculation
-    │   ├── commentary.py          Gemini 2.5 Flash with prompt injection guardrails & fallback
+    │   ├── commentary.py          Gemini 3 Flash Live & Gemini 3.8 Live with prompt injection guardrails & fallback
     │   ├── matches.py             Tiered match telemetry (Cache -> API-Football -> Fallback)
     │   ├── players.py             Player attributes, archetype matching & DNA vectors
     │   └── insights.py            Historical model telemetry & feature importance
@@ -53,7 +53,7 @@ OFFSIDE Platform
 - **Feature Dominance**: Incorporates rolling goal differentials, form indices, and a 44% importance Elo rating differential baseline.
 
 ### 3. AI Tactical Command (`/ai`)
-- **Google Gemini 2.5 Flash Integration**: Low-latency commentary streaming with direct async REST calls.
+- **Google Gemini 3 Flash Live & Gemini 3.8 Live Integration**: Real-time commentary cascade with Gemini 3 / 3.8 Flash secondary failover.
 - **4 Distinct Analyst Personalities**:
   - `Broadcast`: Punchy, dramatic play-by-play commentary.
   - `Tactical`: Analytical breakdown of half-space occupation, pressing schemes, and passing networks.
@@ -82,7 +82,7 @@ OFFSIDE Platform
 | **Authentication** | Firebase Auth (Google OAuth, Email Verification, Anti-Spam Blacklist) |
 | **Backend API** | FastAPI, Uvicorn, Pydantic, HTTPX, SQLite Cache |
 | **Machine Learning** | XGBoost, Scikit-Learn, Pandas, NumPy |
-| **Generative AI** | Google Gemini 2.5 Flash (`gemini-2.5-flash` REST endpoint) |
+| **Generative AI** | Google Gemini 3 Flash Live / Gemini 3.8 Live (`gemini-3-flash-live`, `gemini-3.8-live` with Flash fallback) |
 | **External Sports API** | API-Football (v3 fixtures, lineups, statistics) |
 
 ---

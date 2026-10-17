@@ -23,7 +23,7 @@ This document catalogs the domain workflows, capabilities, and procedures for ma
 ---
 
 ## 2. Real-Time AI Commentary & Tactical Q&A
-- **Model**: `gemini-2.5-flash` via Google Generative Language API v1beta.
+- **Model**: `gemini-3-flash-live` & `gemini-3.8-live` (with `gemini-3-flash` & `gemini-3.8-flash` fallback) via Google Generative Language API v1beta.
 - **Workflow**:
   - `POST /api/commentary/generate`: Formats match context (possession delta, xG, live win probability, recent event) into a prompt and outputs in-character commentary.
   - `POST /api/commentary/ask`: Interactive analyst chat with full match context awareness and sliding conversation history (last 6 messages).

@@ -67,10 +67,12 @@ export function getMomentumColor(score: number): string {
 
 export const SPRING = { stiffness: 400, damping: 30 }
 
-export const WC2026_TEAMS = [
+export const INTERNATIONAL_TEAMS = [
   'Argentina', 'Brazil', 'France', 'Spain', 'England', 'Germany',
   'Portugal', 'Netherlands', 'Belgium', 'Italy', 'Uruguay', 'Colombia',
   'Mexico', 'USA', 'Canada', 'Morocco', 'Senegal', 'Japan', 'South Korea',
   'Australia', 'Croatia', 'Denmark', 'Switzerland', 'Poland', 'Serbia',
   'Ecuador', 'Cameroon', 'Ghana', 'Tunisia', 'Saudi Arabia', 'Iran', 'Qatar',
 ]
+
+export const WC2026_TEAMS = INTERNATIONAL_TEAMS

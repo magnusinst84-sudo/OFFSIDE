@@ -6,7 +6,7 @@ REAL_DISCOVERIES = [
     {"id": 1, "text": "Elo rating differential drives 44% of prediction accuracy — the single most important feature in our model.", "confidence": 89, "teams": ["Argentina", "Brazil"], "category": "Model Insight"},
     {"id": 2, "text": "Home advantage carries 0% importance in post-2010 international football — neutralized by high-stakes tournaments.", "confidence": 76, "teams": [], "category": "Statistical Finding"},
     {"id": 3, "text": "Draw prediction remains an open problem — our model achieves only 2% recall on draw outcomes. The 3-way classification is inherently asymmetric.", "confidence": 94, "teams": [], "category": "Model Limitation"},
-    {"id": 4, "text": "Argentina (Elo 2072) vs Brazil (Elo 1962): our model gives 49% Argentina win probability — the highest differential in WC2026 group stage.", "confidence": 81, "teams": ["Argentina", "Brazil"], "category": "WC2026 Prediction"},
+    {"id": 4, "text": "Argentina (Elo 2072) vs Brazil (Elo 1962): our model gives 49% Argentina win probability — the highest differential in international tournament simulation.", "confidence": 81, "teams": ["Argentina", "Brazil"], "category": "Match Prediction"},
     {"id": 5, "text": "Spain's 4-3-3 possession system correlates with 0.31 xG above expected — the highest in the European qualifying block.", "confidence": 72, "teams": ["Spain"], "category": "Tactical Insight"},
     {"id": 6, "text": "France's attack generates 2.8x more dangerous attacks than their defensive xGA — suggesting clinical efficiency over volume.", "confidence": 68, "teams": ["France"], "category": "Performance Metric"},
 ]

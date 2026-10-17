@@ -9,7 +9,7 @@ API_FOOTBALL_KEY = os.getenv("API_FOOTBALL_KEY", "")
 API_FOOTBALL_BASE = "https://v3.football.api-sports.io"
 HEADERS = {"x-apisports-key": API_FOOTBALL_KEY}
 
-WC2026_PLAYERS = [
+TOP_PLAYERS = [
     {"id": 1100, "name": "Lionel Messi", "team": "Argentina", "position": "Forward", "nationality": "Argentine", "number": 10},
     {"id": 1101, "name": "Kylian Mbappé", "team": "France", "position": "Forward", "nationality": "French", "number": 10},
     {"id": 1102, "name": "Vinicius Jr.", "team": "Brazil", "position": "Forward", "nationality": "Brazilian", "number": 7},
@@ -87,7 +87,7 @@ async def list_roster():
         return cached
     
     players_list = []
-    for p in WC2026_PLAYERS:
+    for p in TOP_PLAYERS:
         dna = DNA_PROFILES.get(p["id"], compute_dynamic_dna({"goals": 10, "assists": 5}, p.get("position", "")))
         players_list.append({
             **p,
@@ -105,7 +105,7 @@ async def search_players(q: str = Query(..., min_length=2)):
     if cached is not None:
         return cached
 
-    results = [p for p in WC2026_PLAYERS if q.lower() in p["name"].lower()]
+    results = [p for p in TOP_PLAYERS if q.lower() in p["name"].lower()]
     
     if not results and API_FOOTBALL_KEY:
         async with httpx.AsyncClient(timeout=8.0) as client:
@@ -141,7 +141,7 @@ async def get_player(player_id: int):
     if cached is not None:
         return cached
 
-    player = next((p for p in WC2026_PLAYERS if p["id"] == player_id), None)
+    player = next((p for p in TOP_PLAYERS if p["id"] == player_id), None)
     
     if player:
         data = {
@@ -205,7 +205,7 @@ async def get_player(player_id: int):
 @router.get("/{player_id}/dna")
 @router.post("/{player_id}/dna")
 async def get_player_dna_endpoint(player_id: int):
-    player = next((p for p in WC2026_PLAYERS if p["id"] == player_id), None)
+    player = next((p for p in TOP_PLAYERS if p["id"] == player_id), None)
     player_name = player["name"] if player else f"Player {player_id}"
     team = player["team"] if player else "Unknown"
     pos = player.get("position", "") if player else ""

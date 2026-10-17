@@ -7,9 +7,9 @@ import { SettingsPanel } from '@/components/settings/SettingsPanel'
 import { AuthModal } from '@/components/auth/AuthModal'
 
 export const metadata: Metadata = {
-  title: 'OFFSIDE — AI Football War Room',
-  description: 'Elite football intelligence platform for World Cup 2026. AI-powered match analysis, win probability, tactical insights, and player DNA scoring.',
-  keywords: 'football AI, World Cup 2026, match analysis, tactical intelligence, win probability',
+  title: 'OFFSIDE',
+  description: 'Real-time European and global football intelligence platform. AI-augmented match analytics, live win probability, tactical insights, and player DNA profiling.',
+  keywords: 'football intelligence, UCL, Premier League, La Liga, live match analysis, win probability, tactical analytics',
 }
 
 export default function RootLayout({

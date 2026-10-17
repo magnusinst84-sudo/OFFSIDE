@@ -29,7 +29,7 @@
   - Typography: Space Grotesk / Inter / JetBrains Mono
 
 ### 3. Backend & AI Guidelines
-- **Gemini AI**: Use direct async REST requests with model `gemini-2.5-flash` (or `gemini-flash-latest`) via `httpx`. Avoid deprecated packages with broken dependencies.
+- **Gemini AI**: Use direct async REST requests with models `gemini-3-flash-live` / `gemini-3.8-live` (with `gemini-3-flash` & `gemini-3.8-flash` fallback) via `httpx`. Avoid deprecated packages with broken dependencies.
 - **Personalities**: Commentary engine supports 4 distinct voices: `broadcast`, `tactical`, `coach`, and `fan`. Prompts must enforce 2–3 concise sentences to fit live UI feeds.
 - **ML Predictions**:
   - The model is an **XGBoost Classifier** (`model.pkl`) trained on 32k+ international matches with an Elo rating differential baseline.

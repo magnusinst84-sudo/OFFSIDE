@@ -100,7 +100,7 @@ Fixed-height tactical war room with zero viewport clipping:
   - Live stat rows with readable 14px mono numbers.
   - Live AreaChart momentum flow comparing home and away pressure trajectories.
 - **AI Commentary & Tactical Feed (`AIPanel.tsx`)**:
-  - Multi-voice commentary stream powered by **Gemini 2.5 Flash** (Broadcast, Tactical, Coach, Fan).
+  - Multi-voice commentary stream powered by **Gemini 3 Flash Live / Gemini 3.8 Live** (Broadcast, Tactical, Coach, Fan).
   - Tactical event timeline (Goals, Yellow Cards, Red Cards, Subs) with hover tooltips.
 
 ---

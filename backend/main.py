@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-app = FastAPI(title="OFFSIDE API", version="2.0.0", description="AI Football War Room Backend")
+app = FastAPI(title="OFFSIDE API", version="2.0.0", description="Football Intelligence & Live Match Analytics Platform")
 
 cors_origins = [
     "http://localhost:3000",

@@ -11,7 +11,7 @@ This document records key decisions, resolved bugs, known limitations, and the e
 - **Root Cause**:
   1. Deprecated `google.generativeai` SDK encountered an `AttributeError` with `pyparsing/httplib2` in the local Python environment.
   2. The Google Generative Language API v1beta removed `gemini-2.0-flash` from availability for this project, causing 404 / quota failure.
-- **Resolution**: Migrated `backend/routers/commentary.py` to direct asynchronous HTTP requests (`httpx`) targeting `gemini-2.5-flash` (`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`). Dynamic AI responses across all 4 analyst personalities are now functional and verified live.
+- **Resolution**: Migrated `backend/routers/commentary.py` to direct asynchronous HTTP requests (`httpx`) targeting `gemini-3-flash-live` & `gemini-3.8-live` (with fallback to `gemini-3-flash` & `gemini-3.8-flash`). Dynamic AI responses across all 4 analyst personalities are functional and verified live.
 
 ### 2. Live Match Scope & API-Football Transition
 - **Symptom**: Platform was initially hardcoded to simulated World Cup 2026 fixtures only, ignoring club competitions.

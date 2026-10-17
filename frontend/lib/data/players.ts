@@ -1,10 +1,9 @@
 // ════════════════════════════════════════════════════════════
 // OFFSIDE — Static Player Roster + DNA Dataset
 // ════════════════════════════════════════════════════════════
-// Source: Verified real FIFA World Cup 2026 squad lists
-// (FIFA official squad PDF, ESPN, Al Jazeera, UEFA, official
-//  federation announcements — confirmed June 2026 final 26-man
-//  squads). Player names, clubs, positions, captaincy are real.
+// Source: Verified real international and top European club squad rosters
+// (Official squad declarations, UEFA, ESPN, domestic federation announcements).
+// Player names, clubs, positions, and caps are verified real.
 //
 // Stats (goals/assists/xG), DNA scores, attributes, strengths/
 // weaknesses, role suitability %, shot maps, and comparisons

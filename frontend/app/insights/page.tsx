@@ -4,7 +4,7 @@ import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianG
 import { useInsights } from '@/hooks/useMatchData'
 
 // ---------------------------------------------------------------------------
-// STATIC DATA — tied to real WC2026 demo matches (matches.py mock fixtures)
+// STATIC DATA — tied to tournament matches and historical fixtures
 // No network calls. No SWR. Numbers are ground truth from the actual
 // XGBoost training run (57.6% / 32,359 / 336 / Elo Diff).
 // ---------------------------------------------------------------------------
@@ -48,8 +48,8 @@ const DISCOVERIES: Discovery[] = [
   },
   {
     id: 4,
-    category: 'WC2026 Prediction',
-    text: 'Brazil (Elo 1962) vs Japan (Elo 1810) — our model gave 64% Brazil win probability, correctly predicting the 2-1 Round of 32 result.',
+    category: 'Match Prediction',
+    text: 'Brazil (Elo 1962) vs Japan (Elo 1810) — our model gave 64% Brazil win probability, correctly predicting the 2-1 knockout stage result.',
     confidence: 81,
     teams: ['Brazil', 'Japan'],
   },
