@@ -76,6 +76,8 @@ export interface Formation {
   away: string
   home_players: Player[]
   away_players: Player[]
+  home_formation?: string
+  away_formation?: string
 }
 
 export interface CommentaryMessage {

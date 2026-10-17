@@ -4,12 +4,13 @@ import React from 'react'
 /* ─────────────────────────────────────────────────────────
    FallbackBadge — amber pill shown when data is estimated
    ───────────────────────────────────────────────────────── */
-export function FallbackBadge({ label = 'Estimated data' }: { label?: string }) {
+export function FallbackBadge({ label, text }: { label?: string; text?: string }) {
+  const displayLabel = label || text || 'Estimated data'
   return (
     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium font-sans"
       style={{ background: 'rgba(245,158,11,0.12)', color: '#F59E0B' }}>
       <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#F59E0B' }} />
-      {label}
+      {displayLabel}
     </span>
   )
 }
@@ -17,13 +18,13 @@ export function FallbackBadge({ label = 'Estimated data' }: { label?: string }) 
 /* ─────────────────────────────────────────────────────────
    StatusBadge — live / upcoming / finished
    ───────────────────────────────────────────────────────── */
-export function StatusBadge({ status, minute }: { status: 'live' | 'upcoming' | 'finished'; minute?: number }) {
+export function StatusBadge({ status, minute }: { status: 'live' | 'upcoming' | 'finished'; minute?: number | null }) {
   if (status === 'live') {
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium"
         style={{ background: 'rgba(239,68,68,0.12)', color: '#EF4444' }}>
         <span className="w-1.5 h-1.5 rounded-full animate-live" style={{ background: '#EF4444' }} />
-        LIVE{minute !== undefined ? ` ${minute}'` : ''}
+        LIVE{minute ? ` ${minute}'` : ''}
       </span>
     )
   }
@@ -164,19 +165,24 @@ export function StatBar({
 export function SegmentedTabs<T extends string>({
   tabs,
   active,
+  activeTab,
   onChange,
   fullWidth = false,
   size = 'md',
+  className = '',
 }: {
   tabs: { id: T; label: string; count?: number }[]
-  active: T
+  active?: T
+  activeTab?: T
   onChange: (id: T) => void
   fullWidth?: boolean
   size?: 'sm' | 'md'
+  className?: string
 }) {
+  const currentActive = (active ?? activeTab ?? tabs[0]?.id) as T
   return (
     <div
-      className={`inline-flex items-center ${fullWidth ? 'w-full' : ''}`}
+      className={`inline-flex items-center ${fullWidth ? 'w-full' : ''} ${className}`}
       style={{
         background: 'var(--color-surface-1)',
         borderRadius: 999,
@@ -185,7 +191,7 @@ export function SegmentedTabs<T extends string>({
       }}
     >
       {tabs.map(tab => {
-        const isActive = active === tab.id
+        const isActive = currentActive === tab.id
         return (
           <button
             key={tab.id}
@@ -270,14 +276,16 @@ export function Card({
   children,
   className = '',
   onClick,
+  hover = false,
   compact = false,
 }: {
   children: React.ReactNode
   className?: string
   onClick?: () => void
+  hover?: boolean
   compact?: boolean
 }) {
-  const isInteractive = Boolean(onClick)
+  const isInteractive = Boolean(onClick) || hover
   return (
     <div
       onClick={onClick}
@@ -335,16 +343,20 @@ export function SectionHeader({
 export function Button({
   children,
   variant = 'primary',
+  size = 'md',
   onClick,
   type = 'button',
   disabled = false,
+  loading = false,
   className = '',
 }: {
   children: React.ReactNode
   variant?: 'primary' | 'secondary' | 'ghost'
+  size?: 'sm' | 'md' | 'lg'
   onClick?: () => void
   type?: 'button' | 'submit'
   disabled?: boolean
+  loading?: boolean
   className?: string
 }) {
   const styles: Record<string, React.CSSProperties> = {
@@ -364,24 +376,29 @@ export function Button({
       border: 'none',
     },
   }
+
+  const height = size === 'sm' ? 36 : size === 'lg' ? 48 : 44
+  const paddingInline = size === 'sm' ? 14 : size === 'lg' ? 24 : 20
+  const fontSize = size === 'sm' ? 13 : size === 'lg' ? 15 : 14
+
   return (
     <button
       type={type}
       onClick={onClick}
-      disabled={disabled}
+      disabled={disabled || loading}
       className={`inline-flex items-center justify-center cursor-pointer transition-opacity duration-150 ${className}`}
       style={{
-        height: 44,
-        paddingInline: 20,
+        height,
+        paddingInline,
         borderRadius: 10,
-        fontSize: 14,
+        fontSize,
         fontWeight: 600,
         fontFamily: 'Inter, sans-serif',
-        opacity: disabled ? 0.45 : 1,
+        opacity: disabled || loading ? 0.45 : 1,
         ...styles[variant],
       }}
     >
-      {children}
+      {loading ? 'Please wait...' : children}
     </button>
   )
 }
@@ -399,6 +416,9 @@ export function Input({
   icon,
   rightElement,
   error,
+  disabled = false,
+  required = false,
+  className = '',
 }: {
   label?: string
   id?: string
@@ -409,9 +429,12 @@ export function Input({
   icon?: React.ReactNode
   rightElement?: React.ReactNode
   error?: string
+  disabled?: boolean
+  required?: boolean
+  className?: string
 }) {
   return (
-    <div className="flex flex-col" style={{ gap: 6 }}>
+    <div className={`flex flex-col ${className}`} style={{ gap: 6 }}>
       {label && (
         <label htmlFor={id} style={{ fontSize: 12, color: 'var(--color-text-muted)', fontWeight: 500 }}>
           {label}
@@ -429,7 +452,9 @@ export function Input({
           placeholder={placeholder}
           value={value}
           onChange={onChange}
-          className="w-full transition-all duration-150"
+          disabled={disabled}
+          required={required}
+          className="w-full transition-all duration-150 disabled:opacity-50"
           style={{
             height: 44,
             paddingInline: icon ? '40px 12px' : rightElement ? '12px 44px' : '12px',
@@ -510,11 +535,13 @@ export function Avatar({
   name,
   size = 32,
   color,
+  className = '',
 }: {
   src?: string | null
   name?: string
   size?: number
   color?: string
+  className?: string
 }) {
   const initials = name
     ? name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase()
@@ -528,7 +555,7 @@ export function Avatar({
         alt={name ?? ''}
         width={size}
         height={size}
-        className="rounded-full object-cover flex-shrink-0"
+        className={`rounded-full object-cover flex-shrink-0 ${className}`}
         style={{ width: size, height: size }}
         onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
       />
@@ -537,7 +564,7 @@ export function Avatar({
 
   return (
     <div
-      className="rounded-full flex items-center justify-center flex-shrink-0 font-display font-semibold"
+      className={`rounded-full flex items-center justify-center flex-shrink-0 font-display font-semibold ${className}`}
       style={{
         width: size,
         height: size,
@@ -590,5 +617,28 @@ export function Toggle({ value, onChange, disabled = false }: {
         }}
       />
     </button>
+  )
+}
+
+/* ─────────────────────────────────────────────────────────
+   Skeleton — pulsing placeholder
+   ───────────────────────────────────────────────────────── */
+export function Skeleton({
+  width = '100%',
+  height = 16,
+  rounded = 'md',
+  className = '',
+}: {
+  width?: string | number
+  height?: string | number
+  rounded?: 'sm' | 'md' | 'lg' | 'full'
+  className?: string
+}) {
+  const r = rounded === 'full' ? '9999px' : rounded === 'lg' ? '12px' : rounded === 'sm' ? '4px' : '8px'
+  return (
+    <div
+      className={`animate-pulse bg-white/[0.06] ${className}`}
+      style={{ width, height, borderRadius: r }}
+    />
   )
 }

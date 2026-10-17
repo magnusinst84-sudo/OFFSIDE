@@ -1,17 +1,45 @@
 'use client'
 import React, { useState, useEffect, useRef } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { useApp } from '@/context/AppContext'
 import { useLiveMatch, usePrediction, useMatches } from '@/hooks/useMatchData'
 import { generateCommentary } from '@/lib/api'
-import type { CommentaryMessage, MomentumPoint, PersonalityType } from '@/lib/types'
+import type { CommentaryMessage, MomentumPoint, PersonalityType, MatchEvent } from '@/lib/types'
 import { MatchHeader } from '@/components/war-room/MatchHeader'
 import { StatsPanel } from '@/components/war-room/StatsPanel'
 import { PitchVisualization } from '@/components/war-room/PitchVisualization'
 import { AIPanel } from '@/components/war-room/AIPanel'
+import { SegmentedTabs, ProbabilityBar } from '@/components/shared/Primitives'
+
+function EventsTimeline({ events }: { events: MatchEvent[] }) {
+  if (!events || events.length === 0) {
+    return (
+      <div className="p-6 text-center text-[13px] text-[#94A3B8] rounded-xl bg-[#0F1117] border border-white/[0.06]">
+        No match events recorded yet.
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-3 p-4">
+      <h3 className="text-[14px] font-semibold text-white mb-1">Match events</h3>
+      <div className="relative border-l border-white/10 ml-4 flex flex-col gap-4 pl-4">
+        {events.map((ev, i) => (
+          <div key={i} className="relative flex items-center gap-3 text-[13px]">
+            <span className="absolute -left-[23px] w-3.5 h-3.5 rounded-full bg-[#1A1D27] border-2 border-[var(--color-accent,#00FF87)]" />
+            <span className="font-mono text-[12px] text-[#94A3B8] w-8">{ev.minute}&apos;</span>
+            <span className="font-medium text-white capitalize">{ev.type.replace('_', ' ')}</span>
+            <span className="text-[#94A3B8] truncate">{ev.player || ev.team}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export default function WarRoomPage() {
   const params = useParams()
+  const router = useRouter()
   const id = params.id as string
   const { currentMatch, setCurrentMatch, personality, setPersonality, showToast } = useApp()
   const { matches: liveMatches } = useMatches('live')
@@ -20,7 +48,7 @@ export default function WarRoomPage() {
 
   const { stats, events, lineups, matchDetail, isLoading } = useLiveMatch(id)
 
-  // Direct access fallback if currentMatch is null on page refresh
+  // Direct access fallback if currentMatch is null on hard refresh
   useEffect(() => {
     if (matchDetail) {
       setCurrentMatch(matchDetail)
@@ -36,16 +64,16 @@ export default function WarRoomPage() {
   const activeMatch = currentMatch || matchDetail
 
   const { prediction } = usePrediction(
-    activeMatch?.home_team.name ?? null,
-    activeMatch?.away_team.name ?? null
+    activeMatch?.home_team?.name ?? null,
+    activeMatch?.away_team?.name ?? null
   )
 
   const [commentary, setCommentary] = useState<CommentaryMessage[]>([])
   const [commentaryLoading, setCommentaryLoading] = useState(false)
   const [momentumHistory, setMomentumHistory] = useState<MomentumPoint[]>([])
-  const prevEventsLen = useRef(0)
+  const [mobileTab, setMobileTab] = useState<'pitch' | 'stats' | 'events' | 'ai'>('pitch')
 
-  // Build momentum history from prediction polls
+  // Build momentum history
   useEffect(() => {
     if (prediction && activeMatch?.minute) {
       setMomentumHistory(prev => {
@@ -86,140 +114,119 @@ export default function WarRoomPage() {
       }])
       setCommentaryLoading(false)
     }).catch(() => {
-      showToast('Tactical engine offline — retrying', 'error')
       setCommentaryLoading(false)
     })
-  }, [activeMatch, prediction])
+  }, [activeMatch, prediction, id, personality, stats])
 
-  // Detect new events and generate commentary
-  useEffect(() => {
-    if (!events || events.length <= prevEventsLen.current) {
-      prevEventsLen.current = events?.length ?? 0
-      return
-    }
-    const newEvent = events[events.length - 1]
-    prevEventsLen.current = events.length
-
-    generateCommentary({
-      match_id: Number(id),
-      event_type: newEvent.type,
-      match_state: {
-        home: activeMatch?.home_team.name,
-        away: activeMatch?.away_team.name,
-        stats,
-        prediction,
-      },
-      personality,
-      event_detail: `${newEvent.minute}' ${newEvent.player} — ${newEvent.detail || newEvent.type}`,
-    }).then(msg => {
-      setCommentary(prev => [...prev, {
-        id: Date.now().toString(),
-        text: msg.text,
-        timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        personality: msg.personality as PersonalityType,
-        event_type: msg.event_type,
-      }])
-    }).catch(() => {})
-  }, [events, activeMatch])
-
-  const handlePersonalityChange = async (p: PersonalityType) => {
-    setPersonality(p)
-    try {
-      const msg = await generateCommentary({
-        match_id: Number(id),
-        event_type: 'tactical',
-        match_state: { home: activeMatch?.home_team.name, away: activeMatch?.away_team.name, stats, prediction },
-        personality: p,
-        event_detail: `Analyst switch to ${p} mode`,
-      })
-      setCommentary(prev => [...prev, {
-        id: Date.now().toString(),
-        text: msg.text,
-        timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        personality: p,
-        event_type: 'tactical',
-      }])
-    } catch {}
-  }
-
-  const [mobileTab, setMobileTab] = useState<'pitch' | 'stats' | 'ai'>('pitch')
+  const isLive = activeMatch?.status === 'live'
 
   return (
-    <div className="flex flex-col h-screen max-h-screen overflow-hidden pb-20 md:pb-24 w-full" style={{ background: '#050508' }}>
-      {/* Top bar */}
-      <MatchHeader match={activeMatch} prediction={prediction} isLoading={isLoading && !activeMatch} />
+    <div className="w-full min-h-[calc(100dvh-56px)] flex flex-col bg-[#050508] pb-32">
+      {/* 1. Scoreboard (Top) */}
+      <MatchHeader match={activeMatch} prediction={prediction} isLoading={isLoading} />
 
-      {/* Mobile view selector (hidden on lg+) */}
-      <div className="flex lg:hidden items-center justify-center gap-2 p-2 border-b border-white/[0.06] bg-[#0F1117] flex-shrink-0">
-        {(['pitch', 'stats', 'ai'] as const).map(tab => (
-          <button
-            key={tab}
-            onClick={() => setMobileTab(tab)}
-            className={`font-mono text-[11px] font-semibold tracking-wider px-3.5 py-1.5 rounded transition-all ${
-              mobileTab === tab
-                ? 'bg-[#00FF87]/15 text-[#00FF87] border border-[#00FF87]/30'
-                : 'text-[#94A3B8] hover:text-white bg-transparent border border-transparent'
-            }`}
-          >
-            {tab.toUpperCase()}
-          </button>
-        ))}
-      </div>
-
-      {/* Main layout: Desktop 3-column, Mobile tabbed */}
-      <div className="flex flex-1 overflow-hidden min-h-0">
-        {/* Left panel — stats (always on lg, conditional on mobile) */}
-        <div
-          className={`flex-shrink-0 overflow-y-auto ${
-            mobileTab === 'stats' ? 'flex flex-col w-full' : 'hidden lg:flex lg:flex-col'
-          }`}
-          style={{
-            width: undefined,
-            minWidth: undefined,
-            borderRight: '1px solid rgba(255,255,255,0.06)',
-            scrollbarWidth: 'thin',
-            scrollbarColor: '#1A1D27 transparent',
-          }}
-        >
-          <div className="lg:w-[280px] w-full">
-            <StatsPanel
-              stats={stats}
-              prediction={prediction}
-              momentumHistory={momentumHistory}
-              currentMinute={activeMatch?.minute ?? undefined}
-              isLoading={isLoading}
-            />
-          </div>
-        </div>
-
-        {/* Center panel — pitch (always on lg, conditional on mobile) */}
-        <div
-          className={`flex-1 flex flex-col p-2 sm:p-4 overflow-hidden min-w-0 ${
-            mobileTab === 'pitch' ? 'flex' : 'hidden lg:flex'
-          }`}
-        >
-          <PitchVisualization
-            lineups={lineups}
-            events={events}
-            currentMinute={activeMatch?.minute ?? undefined}
+      {/* 2. Mobile View (< 1024px): Tabs for Pitch / Stats / Events / AI */}
+      <div className="lg:hidden flex flex-col px-4 pt-4">
+        {/* Sticky Mobile Tabs (at least 44px high) */}
+        <div className="sticky top-[56px] z-30 bg-[#050508]/95 backdrop-blur-md pb-3 border-b border-white/[0.08]">
+          <SegmentedTabs
+            tabs={[
+              { id: 'pitch', label: 'Pitch' },
+              { id: 'stats', label: 'Stats' },
+              { id: 'events', label: 'Events' },
+              { id: 'ai', label: 'AI' },
+            ]}
+            activeTab={mobileTab}
+            onChange={id => setMobileTab(id as any)}
+            className="w-full"
           />
         </div>
 
-        {/* Right panel — AI commentary (always on lg, conditional on mobile) */}
-        <div
-          className={`flex-shrink-0 p-2 sm:p-3 overflow-hidden ${
-            mobileTab === 'ai' ? 'flex flex-col w-full' : 'hidden lg:flex lg:flex-col'
-          }`}
-          style={{ borderLeft: '1px solid rgba(255,255,255,0.06)' }}
-        >
-          <div className="lg:w-[320px] w-full h-full">
+        {/* Mobile Tab Content */}
+        <div className="mt-4">
+          {mobileTab === 'pitch' && (
+            <div className="w-full max-w-[480px] mx-auto">
+              <PitchVisualization
+                lineups={lineups}
+                events={events}
+                currentMinute={activeMatch?.minute ?? 0}
+                isLive={isLive}
+              />
+            </div>
+          )}
+
+          {mobileTab === 'stats' && (
+            <StatsPanel
+              match={activeMatch}
+              stats={stats}
+              prediction={prediction}
+              momentumHistory={momentumHistory}
+              currentMinute={activeMatch?.minute ?? 0}
+              isLoading={isLoading}
+            />
+          )}
+
+          {mobileTab === 'events' && (
+            <EventsTimeline events={events} />
+          )}
+
+          {mobileTab === 'ai' && (
             <AIPanel
+              matchId={id}
               commentary={commentary}
-              isLoading={commentaryLoading}
               personality={personality}
-              onPersonalityChange={handlePersonalityChange}
+              onPersonalityChange={setPersonality}
+              isLoading={commentaryLoading}
+              isUpcoming={activeMatch?.status === 'upcoming'}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* 3. Desktop View (>= 1024px): Two-Column Layout */}
+      <div className="hidden lg:grid grid-cols-[7fr_5fr] gap-8 max-w-[1440px] w-full mx-auto px-6 pt-6">
+        {/* Pitch Column: max 640px, centered */}
+        <div className="flex flex-col items-center">
+          <div className="w-full max-w-[640px]">
+            <PitchVisualization
+              lineups={lineups}
+              events={events}
+              currentMinute={activeMatch?.minute ?? 0}
+              isLive={isLive}
             />
           </div>
+        </div>
+
+        {/* Panel Column: min 380px, stacked sections with 32px space and hairlines */}
+        <div className="flex flex-col gap-6 rounded-xl bg-[#0F1117] border border-white/[0.08] overflow-hidden">
+          {/* Stats Panel */}
+          <StatsPanel
+            match={activeMatch}
+            stats={stats}
+            prediction={prediction}
+            momentumHistory={momentumHistory}
+            currentMinute={activeMatch?.minute ?? 0}
+            isLoading={isLoading}
+          />
+
+          {/* AI Commentary Panel */}
+          <div className="border-t border-white/[0.08]">
+            <AIPanel
+              matchId={id}
+              commentary={commentary}
+              personality={personality}
+              onPersonalityChange={setPersonality}
+              isLoading={commentaryLoading}
+              isUpcoming={activeMatch?.status === 'upcoming'}
+            />
+          </div>
+
+          {/* Events Timeline (if live or finished) */}
+          {activeMatch?.status !== 'upcoming' && events.length > 0 && (
+            <div className="border-t border-white/[0.08]">
+              <EventsTimeline events={events} />
+            </div>
+          )}
         </div>
       </div>
     </div>

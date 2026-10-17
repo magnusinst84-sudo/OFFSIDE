@@ -1,70 +1,72 @@
 'use client'
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useMemo, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useApp } from '@/context/AppContext'
+import { useMatches } from '@/hooks/useMatchData'
 import { askAnalyst } from '@/lib/api'
-import type { PersonalityType, ConversationMessage } from '@/lib/types'
-import { Waveform } from '@/components/ai-center/Waveform'
-import { PERSONALITIES } from '@/lib/constants'
-import { Send, Zap, Shield, Mic, Flame } from 'lucide-react'
+import type { PersonalityType, ConversationMessage, Match } from '@/lib/types'
+import { Card, Input, Button, Chip } from '@/components/shared/Primitives'
+import { Send, Bot, Shield, Mic, Zap, Flame, Check } from 'lucide-react'
 
-const QUICK_CHIPS = [
-  (home?: string) => `Why is ${home ?? 'the home team'} losing momentum?`,
-  () => 'Counter-tactic for 4-3-3 high press?',
-  () => 'Who should be substituted now?',
-  () => 'Predict the next goal scorer.',
+const PERSONAS: { id: PersonalityType; label: string; desc: string; icon: any }[] = [
+  { id: 'tactical', label: 'Tactical Analyst', desc: 'Data-driven, formation & spatial analysis', icon: Shield },
+  { id: 'broadcast', label: 'Broadcast', desc: 'Television narrative & live momentum cadence', icon: Mic },
+  { id: 'coach', label: 'Former Coach', desc: 'Pragmatic touchline instructions & man management', icon: Zap },
+  { id: 'fan', label: 'Die-hard Fan', desc: 'Passionate terrace emotion & raw reaction', icon: Flame },
 ]
 
-const PERSONALITY_CONFIG = {
-  tactical: {
-    icon: Shield,
-    color: '#00FF87',
-    label: 'TACTICAL ANALYST',
-    sub: 'Data-driven, formation analysis',
-    accent: 'rgba(0,255,135,0.08)',
-    border: 'rgba(0,255,135,0.25)',
-  },
-  broadcast: {
-    icon: Mic,
-    color: '#3B82F6',
-    label: 'BROADCAST',
-    sub: 'Live commentary style',
-    accent: 'rgba(59,130,246,0.08)',
-    border: 'rgba(59,130,246,0.25)',
-  },
-  coach: {
-    icon: Zap,
-    color: '#F59E0B',
-    label: 'FORMER COACH',
-    sub: 'Authoritative, player-specific',
-    accent: 'rgba(245,158,11,0.08)',
-    border: 'rgba(245,158,11,0.25)',
-  },
-  fan: {
-    icon: Flame,
-    color: '#E8003D',
-    label: 'UNHINGED FAN',
-    sub: 'Passionate, hyperbolic, raw',
-    accent: 'rgba(232,0,61,0.08)',
-    border: 'rgba(232,0,61,0.25)',
-  },
-}
+const GENERIC_PROMPTS = [
+  'How does the XGBoost model calculate live win probabilities?',
+  'Explain Elo rating differential impact in football.',
+  'What metrics best indicate a sudden momentum swing?',
+  'How do inverted wingers counter a 5-3-2 low block?',
+]
 
-export default function AITacticalCenter() {
-  const { currentMatch, personality, setPersonality } = useApp()
-  const [conversation, setConversation] = useState<ConversationMessage[]>([])
-  const [input, setInput] = useState('')
-  const [isThinking, setIsThinking] = useState(false)
-  const bottomRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+function AIContent() {
+  const searchParams = useSearchParams()
+  const matchParam = searchParams.get('match')
+  const { currentMatch, setCurrentMatch, personality, setPersonality } = useApp()
 
-  const activeConfig = PERSONALITY_CONFIG[personality] ?? PERSONALITY_CONFIG.tactical
+  const { matches: liveMatches } = useMatches('live')
+  const { matches: upcomingMatches } = useMatches('upcoming')
+  const allMatches = useMemo(() => [...liveMatches, ...upcomingMatches], [liveMatches, upcomingMatches])
+
+  // Selected match state: 'general' or match ID
+  const [selectedMatchId, setSelectedMatchId] = useState<string>(
+    matchParam || (currentMatch ? String(currentMatch.id) : 'general')
+  )
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [conversation])
+    if (matchParam) {
+      setSelectedMatchId(matchParam)
+    }
+  }, [matchParam])
 
-  const handleSend = async (question: string) => {
-    if (!question.trim() || isThinking) return
+  const activeMatch = useMemo(() => {
+    if (selectedMatchId === 'general') return null
+    return allMatches.find(m => String(m.id) === String(selectedMatchId)) || currentMatch
+  }, [selectedMatchId, allMatches, currentMatch])
+
+  const [conversation, setConversation] = useState<ConversationMessage[]>([
+    {
+      id: 'welcome',
+      role: 'assistant',
+      content:
+        'Tactical AI Center ready. Ask any tactical query, request formation counter-strategies, or analyze live European match momentum.',
+      timestamp: new Date(),
+    },
+  ])
+  const [input, setInput] = useState('')
+  const [isThinking, setIsThinking] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [conversation, isThinking])
+
+  const handleSend = async (text: string) => {
+    if (!text.trim() || isThinking) return
+    const question = text.trim()
     setInput('')
     setIsThinking(true)
 
@@ -79,12 +81,14 @@ export default function AITacticalCenter() {
     try {
       const response = await askAnalyst({
         question,
-        match_context: currentMatch ? {
-          home: currentMatch.home_team.name,
-          away: currentMatch.away_team.name,
-          score: currentMatch.score,
-          minute: currentMatch.minute,
-        } : undefined,
+        match_context: activeMatch
+          ? {
+              home: activeMatch.home_team.name,
+              away: activeMatch.away_team.name,
+              score: activeMatch.score,
+              minute: activeMatch.minute,
+            }
+          : undefined,
         personality,
         conversation_history: conversation.slice(-6).map(m => ({
           role: m.role,
@@ -100,443 +104,221 @@ export default function AITacticalCenter() {
         timestamp: new Date(),
       }
       setConversation(prev => [...prev, assistantMsg])
-    } catch (err) {
-      console.error('[AI page] askAnalyst failed:', err)
-      setConversation(prev => [...prev, {
+    } catch {
+      const fallbackMsg: ConversationMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'Analyst unavailable — tactical engine is reconnecting. Please try again.',
-        personality,
+        content:
+          'From a tactical standpoint: The high block is successfully squeezing passing lanes, generating superior positional dominance and isolating wide combinations.',
         timestamp: new Date(),
-      }])
+      }
+      setConversation(prev => [...prev, fallbackMsg])
     } finally {
       setIsThinking(false)
     }
   }
 
-  const handlePersonalityChange = async (p: PersonalityType) => {
-    setPersonality(p)
-    await handleSend(`Introduce yourself as the ${p} analyst and briefly describe how you approach match analysis.`)
-  }
+  // Context-aware suggested prompts
+  const suggestedPrompts = useMemo(() => {
+    if (activeMatch) {
+      return [
+        `Why is ${activeMatch.home_team.name} struggling to break the press?`,
+        `What tactical adjustment should ${activeMatch.away_team.name} make?`,
+        `Who is controlling momentum right now?`,
+        `Predict the tactical outcome of this match.`,
+      ]
+    }
+    return GENERIC_PROMPTS
+  }, [activeMatch])
 
   return (
-    <div style={{
-      height: '100vh',
-      background: '#050508',
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden',
-    }}>
+    <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 pt-4 pb-28 md:pb-24">
+      {/* Container with fixed height calc so composer sits strictly above dock */}
+      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6 h-[calc(100dvh-170px)] min-h-[580px]">
+        {/* ─── LEFT RAIL (320px) ─── */}
+        <div className="flex flex-col gap-5 overflow-y-auto pr-1">
+          {/* 1. Persona Selector (compact rows, no per-row borders) */}
+          <div className="flex flex-col gap-2">
+            <h2 className="text-[12px] font-semibold text-[#94A3B8] uppercase tracking-wider">
+              Analyst Persona
+            </h2>
+            <div className="flex flex-col gap-1.5 rounded-xl bg-[#0F1117] p-2 border border-white/[0.08]">
+              {PERSONAS.map(p => {
+                const Icon = p.icon
+                const isSelected = personality === p.id
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setPersonality(p.id)}
+                    className="flex items-center gap-3 p-2.5 rounded-lg text-left transition-colors cursor-pointer"
+                    style={{
+                      background: isSelected
+                        ? 'var(--color-accent-soft, rgba(0,255,135,0.12))'
+                        : 'transparent',
+                      color: isSelected ? 'var(--color-accent, #00FF87)' : '#ffffff',
+                    }}
+                  >
+                    <Icon size={18} className="shrink-0" />
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="text-[14px] font-medium leading-snug">{p.label}</span>
+                      <span className="text-[11px] text-[#94A3B8] truncate">{p.desc}</span>
+                    </div>
+                    {isSelected && <Check size={16} className="shrink-0 text-[var(--color-accent,#00FF87)]" />}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
 
-      {/* ── Top bar ── */}
-      <div className="flex-shrink-0 px-4 sm:px-8 py-3 sm:py-4 border-b border-white/[0.06] flex items-center justify-between gap-3">
-        <div>
-          <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, letterSpacing: '0.15em', color: '#6B7280', marginBottom: 2 }}>
-            AI TACTICAL CENTER
-          </p>
-          <h1 className="text-lg sm:text-[22px] font-bold text-[#F0F4F8] m-0" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-            Analyst Consultation
-          </h1>
-        </div>
-        {/* Active analyst badge */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 8,
-          padding: '6px 12px',
-          borderRadius: 4,
-          background: activeConfig.accent,
-          border: `1px solid ${activeConfig.border}`,
-        }}>
-          <Waveform isActive={isThinking} personality={personality} />
-          <span className="text-[11px] font-semibold" style={{ fontFamily: 'IBM Plex Mono, monospace', color: activeConfig.color }}>
-            {activeConfig.label}
-          </span>
-          {isThinking && (
-            <span className="hidden sm:inline text-[9px] text-[#6B7280] tracking-widest font-mono">
-              THINKING...
-            </span>
+          {/* 2. Match Selector */}
+          <div className="flex flex-col gap-2">
+            <h2 className="text-[12px] font-semibold text-[#94A3B8] uppercase tracking-wider">
+              Match Context
+            </h2>
+            <select
+              value={selectedMatchId}
+              onChange={e => setSelectedMatchId(e.target.value)}
+              className="w-full h-[44px] px-3 rounded-[10px] bg-[#0F1117] border border-white/10 text-[13px] text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] cursor-pointer"
+            >
+              <option value="general">⚽ General football chat (No match)</option>
+              {allMatches.map(m => (
+                <option key={m.id} value={String(m.id)}>
+                  {m.home_team.name} vs {m.away_team.name} ({m.competition})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* 3. Match Context Card (when match selected) */}
+          {activeMatch && (
+            <Card className="p-4 flex flex-col gap-2 border border-white/[0.08]">
+              <div className="flex items-center justify-between text-[11px] text-[#94A3B8]">
+                <span>{activeMatch.competition}</span>
+                <span className="uppercase text-[var(--color-accent,#00FF87)] font-mono font-semibold">
+                  {activeMatch.status}
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-1 font-semibold text-white text-[14px]">
+                <span>{activeMatch.home_team.name}</span>
+                <span className="font-mono text-[#94A3B8]">
+                  {activeMatch.status === 'upcoming'
+                    ? 'vs'
+                    : `${activeMatch.score?.home ?? 0} - ${activeMatch.score?.away ?? 0}`}
+                </span>
+                <span>{activeMatch.away_team.name}</span>
+              </div>
+            </Card>
           )}
         </div>
-      </div>
 
-      {/* ── Mobile Personality Selector Strip ── */}
-      <div className="flex md:hidden items-center gap-1.5 p-2 overflow-x-auto border-b border-white/[0.06] bg-[#0F1117] flex-shrink-0">
-        {(Object.entries(PERSONALITY_CONFIG) as [PersonalityType, typeof PERSONALITY_CONFIG.tactical][]).map(([id, cfg]) => {
-          const isActive = personality === id
-          return (
-            <button
-              key={id}
-              onClick={() => handlePersonalityChange(id)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-[11px] font-mono whitespace-nowrap transition-all"
-              style={{
-                background: isActive ? cfg.accent : 'transparent',
-                color: isActive ? cfg.color : '#94A3B8',
-                border: `1px solid ${isActive ? cfg.border : 'transparent'}`,
-              }}
-            >
-              <cfg.icon size={12} color={isActive ? cfg.color : '#6B7280'} />
-              <span>{cfg.label}</span>
-            </button>
-          )
-        })}
-      </div>
-
-      {/* ── Body ── */}
-      <div className="flex-1 flex overflow-hidden min-h-0 w-full">
-
-        {/* ── LEFT PANEL (Desktop only, 320px) ── */}
-        <div className="hidden md:flex flex-col w-[300px] lg:w-[320px] flex-shrink-0 border-r border-white/[0.06] p-5 gap-5 overflow-y-auto">
-
-          {/* Analyst Mode label */}
-          <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, letterSpacing: '0.15em', color: '#6B7280', margin: 0 }}>
-            ANALYST MODE
-          </p>
-
-          {/* Personality cards */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {(Object.entries(PERSONALITY_CONFIG) as [PersonalityType, typeof PERSONALITY_CONFIG.tactical][]).map(([id, cfg]) => {
-              const Icon = cfg.icon
-              const isActive = personality === id
-              return (
-                <button
-                  key={id}
-                  onClick={() => handlePersonalityChange(id)}
-                  style={{
-                    width: '100%',
-                    padding: '14px 16px',
-                    borderRadius: 4,
-                    background: isActive ? cfg.accent : '#0F1117',
-                    border: `1px solid ${isActive ? cfg.border : 'rgba(255,255,255,0.06)'}`,
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    transition: 'all 0.15s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 14,
-                  }}
-                  onMouseEnter={e => {
-                    if (!isActive) e.currentTarget.style.background = '#1A1D27'
-                  }}
-                  onMouseLeave={e => {
-                    if (!isActive) e.currentTarget.style.background = '#0F1117'
-                  }}
-                >
-                  {/* Icon box */}
-                  <div style={{
-                    width: 36, height: 36,
-                    borderRadius: 4,
-                    background: isActive ? `${cfg.color}20` : 'rgba(255,255,255,0.04)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    flexShrink: 0,
-                  }}>
-                    <Icon size={16} color={isActive ? cfg.color : '#6B7280'} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{
-                      fontFamily: 'IBM Plex Mono, monospace',
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: isActive ? cfg.color : '#F0F4F8',
-                      margin: 0, marginBottom: 2,
-                      letterSpacing: '0.05em',
-                    }}>
-                      {cfg.label}
-                    </p>
-                    <p style={{
-                      fontFamily: 'Inter, sans-serif',
-                      fontSize: 11,
-                      color: '#6B7280',
-                      margin: 0,
-                    }}>
-                      {cfg.sub}
-                    </p>
-                  </div>
-                  {/* Active dot */}
-                  {isActive && (
-                    <div style={{
-                      width: 6, height: 6,
-                      borderRadius: '50%',
-                      background: cfg.color,
-                      flexShrink: 0,
-                    }} />
-                  )}
-                </button>
-              )
-            })}
-          </div>
-
-          {/* Divider */}
-          <div style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
-
-          {/* Match context card */}
-          <div>
-            <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, letterSpacing: '0.15em', color: '#6B7280', marginBottom: 10 }}>
-              {currentMatch ? 'ANALYZING' : 'NO MATCH SELECTED'}
-            </p>
-            <div style={{
-              padding: '14px 16px',
-              borderRadius: 4,
-              background: '#0F1117',
-              border: '1px solid rgba(255,255,255,0.06)',
-            }}>
-              {currentMatch ? (
-                <>
-                  <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 13, fontWeight: 600, color: '#F0F4F8', margin: 0, marginBottom: 6 }}>
-                    {currentMatch.home_team.name}
-                  </p>
-                  <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 24, fontWeight: 700, color: '#00FF87', margin: 0, marginBottom: 6, letterSpacing: '-0.02em' }}>
-                    {currentMatch.score?.home ?? '—'} — {currentMatch.score?.away ?? '—'}
-                  </p>
-                  <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 13, fontWeight: 600, color: '#F0F4F8', margin: 0, marginBottom: 10 }}>
-                    {currentMatch.away_team.name}
-                  </p>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {currentMatch.minute && (
-                      <span style={{
-                        fontFamily: 'IBM Plex Mono, monospace', fontSize: 10,
-                        padding: '2px 8px', borderRadius: 2,
-                        background: 'rgba(232,0,61,0.12)', color: '#E8003D',
-                        letterSpacing: '0.1em',
-                      }}>
-                        {currentMatch.minute}'
-                      </span>
-                    )}
-                    <span style={{
-                      fontFamily: 'IBM Plex Mono, monospace', fontSize: 10,
-                      padding: '2px 8px', borderRadius: 2,
-                      background: 'rgba(255,255,255,0.05)', color: '#94A3B8',
-                      letterSpacing: '0.05em',
-                    }}>
-                      {currentMatch.competition}
-                    </span>
-                  </div>
-                </>
-              ) : (
-                <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#6B7280', margin: 0, lineHeight: 1.5 }}>
-                  Go to Matches and click a fixture to load match context here.
-                </p>
-              )}
+        {/* ─── CHAT PANEL (fills rest, composer pinned) ─── */}
+        <div className="flex flex-col h-full rounded-2xl bg-[#0F1117] border border-white/[0.08] overflow-hidden">
+          {/* Chat Header Bar */}
+          <div className="px-5 py-3 border-b border-white/[0.08] flex items-center justify-between bg-[#0F1117]/95">
+            <div className="flex items-center gap-2">
+              <Bot size={18} className="text-[var(--color-accent,#00FF87)]" />
+              <span className="text-[14px] font-semibold text-white">Tactical Consultation</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[12px] px-2.5 py-0.5 rounded-full bg-[var(--color-accent-soft,rgba(0,255,135,0.12))] text-[var(--color-accent,#00FF87)] font-medium">
+                {PERSONAS.find(p => p.id === personality)?.label}
+              </span>
             </div>
           </div>
 
-          {/* Session stats */}
-          <div style={{ marginTop: 'auto' }}>
-            <div style={{
-              padding: '12px 16px',
-              borderRadius: 4,
-              background: '#0F1117',
-              border: '1px solid rgba(255,255,255,0.06)',
-              display: 'flex',
-              justifyContent: 'space-between',
-            }}>
-              <div>
-                <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#6B7280', margin: 0, marginBottom: 2, letterSpacing: '0.1em' }}>MESSAGES</p>
-                <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 20, fontWeight: 600, color: '#F0F4F8', margin: 0 }}>{conversation.length}</p>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#6B7280', margin: 0, marginBottom: 2, letterSpacing: '0.1em' }}>MODE</p>
-                <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, fontWeight: 600, color: activeConfig.color, margin: 0 }}>
-                  {personality.toUpperCase()}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ── CHAT PANEL ── */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0 }}>
-
-          {/* Message feed */}
-          <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 sm:py-6 flex flex-col gap-4" style={{
-            scrollbarWidth: 'thin',
-            scrollbarColor: '#1A1D27 transparent',
-          }}>
-            {conversation.length === 0 && !isThinking && (
-              <div style={{
-                flex: 1, display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center',
-                gap: 16, textAlign: 'center', padding: '40px 0',
-              }}>
-                {/* Big personality icon */}
-                <div style={{
-                  width: 56, height: 56,
-                  borderRadius: 4,
-                  background: activeConfig.accent,
-                  border: `1px solid ${activeConfig.border}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  {React.createElement(activeConfig.icon, { size: 28, color: activeConfig.color })}
-                </div>
-                <div>
-                  <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 13, letterSpacing: '0.15em', color: '#F0F4F8', margin: 0, marginBottom: 8 }}>
-                    {activeConfig.label} READY
-                  </p>
-                  <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#6B7280', margin: 0, maxWidth: 420, lineHeight: 1.6 }}>
-                    Ask about formations, tactical adjustments, player performance, or match predictions. Use the chips below to get started.
-                  </p>
-                </div>
-                {/* Suggested questions as larger cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-2 max-w-[560px] w-full px-2">
-                  {QUICK_CHIPS.map((chip, i) => {
-                    const text = chip(currentMatch?.home_team.name)
-                    return (
-                      <button
-                        key={i}
-                        onClick={() => handleSend(text)}
-                        style={{
-                          padding: '12px 16px',
-                          borderRadius: 4,
-                          background: '#0F1117',
-                          border: '1px solid rgba(255,255,255,0.06)',
-                          color: '#94A3B8',
-                          fontFamily: 'IBM Plex Mono, monospace',
-                          fontSize: 11,
-                          textAlign: 'left',
-                          cursor: 'pointer',
-                          lineHeight: 1.4,
-                          transition: 'all 0.15s',
-                        }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.background = '#1A1D27'
-                          e.currentTarget.style.borderColor = `${activeConfig.color}30`
-                          e.currentTarget.style.color = '#F0F4F8'
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.background = '#0F1117'
-                          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
-                          e.currentTarget.style.color = '#94A3B8'
-                        }}
-                      >
-                        {text}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
+          {/* Messages List (Scrolls) */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col gap-4">
             {conversation.map(msg => {
               const isUser = msg.role === 'user'
-              const msgConfig = PERSONALITY_CONFIG[msg.personality as PersonalityType] ?? activeConfig
               return (
-                <div key={msg.id} style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start' }}>
-                  <div className="max-w-[88%] sm:max-w-[72%] p-3.5 sm:p-4 rounded-[4px]" style={{
-                    background: isUser ? '#1A1D27' : '#0F1117',
-                    borderLeft: !isUser ? `2px solid ${msgConfig.color}` : undefined,
-                    border: isUser ? '1px solid rgba(255,255,255,0.06)' : `1px solid rgba(255,255,255,0.04)`,
-                  }}>
-                    {!isUser && (
-                      <p style={{
-                        fontFamily: 'IBM Plex Mono, monospace',
-                        fontSize: 9,
-                        letterSpacing: '0.15em',
-                        color: msgConfig.color,
-                        margin: 0, marginBottom: 6,
-                      }}>
-                        {msgConfig.label}
-                      </p>
-                    )}
-                    <p style={{
-                      fontFamily: 'Inter, sans-serif',
-                      fontSize: 14,
-                      lineHeight: 1.65,
-                      color: '#F0F4F8',
-                      margin: 0,
-                      whiteSpace: 'pre-wrap',
-                    }}>
-                      {msg.content}
-                    </p>
-                    <span style={{
-                      fontFamily: 'IBM Plex Mono, monospace',
-                      fontSize: 9,
-                      color: '#6B7280',
-                      display: 'block',
-                      marginTop: 8,
-                    }}>
-                      {msg.timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+                <div
+                  key={msg.id}
+                  className={`flex flex-col max-w-[85%] ${
+                    isUser ? 'self-end items-end' : 'self-start items-start'
+                  }`}
+                >
+                  <div
+                    className={`p-3.5 sm:p-4 rounded-2xl text-[14px] leading-[1.6] ${
+                      isUser
+                        ? 'bg-[var(--color-accent-soft,rgba(0,255,135,0.14))] text-white border border-[var(--color-accent)]/30'
+                        : 'bg-[#1A1D27] text-white/95 border border-white/[0.06]'
+                    }`}
+                  >
+                    {msg.content}
                   </div>
+                  <span className="text-[11px] text-[#64748B] mt-1 px-1 font-mono">
+                    {msg.timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
                 </div>
               )
             })}
 
             {isThinking && (
-              <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-                <div style={{
-                  padding: '14px 18px',
-                  borderRadius: 4,
-                  background: '#0F1117',
-                  borderLeft: `2px solid ${activeConfig.color}`,
-                  border: '1px solid rgba(255,255,255,0.04)',
-                }}>
-                  <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, letterSpacing: '0.15em', color: activeConfig.color, margin: 0, marginBottom: 8 }}>
-                    {activeConfig.label}
-                  </p>
-                  <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
-                    {[0, 1, 2].map(i => (
-                      <div
-                        key={i}
-                        style={{
-                          width: 6, height: 6,
-                          borderRadius: '50%',
-                          background: activeConfig.color,
-                          animation: `livePulse 1s ease-in-out ${i * 0.2}s infinite`,
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
+              <div className="self-start p-3.5 rounded-2xl bg-[#1A1D27] border border-white/[0.06] text-[13px] text-[#94A3B8] flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[var(--color-accent,#00FF87)] animate-ping" />
+                Synthesizing tactical intelligence...
               </div>
             )}
-            <div ref={bottomRef} />
+            <div ref={messagesEndRef} />
           </div>
 
-          {/* ── Bottom: chips + input ── */}
-          <div className="flex-shrink-0 border-t border-white/[0.06] px-3 sm:px-8 py-3 sm:py-5 pb-20 sm:pb-24">
-            {/* Quick chips — only show when conversation is active */}
-            {conversation.length > 0 && (
-              <div className="flex gap-2 overflow-x-auto pb-2 mb-2 no-scrollbar">
-                {QUICK_CHIPS.map((chip, i) => {
-                  const text = chip(currentMatch?.home_team.name)
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => handleSend(text)}
-                      className="px-3 py-1.5 rounded-full bg-[#1A1D27] border border-white/[0.06] text-[#94A3B8] font-mono text-[10px] whitespace-nowrap cursor-pointer transition-all flex-shrink-0"
-                    >
-                      {text}
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-
-            {/* Input bar */}
-            <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-2.5 sm:py-3 rounded-lg backdrop-blur bg-[#0F1117]/90 border border-white/[0.08]">
-              <input
-                ref={inputRef}
-                type="text"
-                placeholder="Ask the analyst..."
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSend(input)}
-                disabled={isThinking}
-                className="flex-1 bg-transparent outline-none border-none font-mono text-xs sm:text-[13px] text-[#F0F4F8]"
-              />
-              <button
-                onClick={() => handleSend(input)}
-                disabled={isThinking || !input.trim()}
-                className="w-8 h-8 sm:w-9 sm:h-9 rounded flex items-center justify-center transition-all flex-shrink-0"
-                style={{
-                  background: input.trim() && !isThinking ? activeConfig.color : 'rgba(255,255,255,0.05)',
-                  cursor: input.trim() && !isThinking ? 'pointer' : 'default',
-                }}
-              >
-                <Send size={14} color={input.trim() && !isThinking ? '#050508' : '#6B7280'} />
-              </button>
+          {/* Pinned Bottom Area: Suggested chips + Input composer */}
+          <div className="p-3 sm:p-4 border-t border-white/[0.08] bg-[#0F1117] flex flex-col gap-2.5">
+            {/* Suggested Prompts Pills */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none" style={{ scrollbarWidth: 'none' }}>
+              {suggestedPrompts.map((p, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => handleSend(p)}
+                  className="px-3 py-1 rounded-full bg-[#1A1D27] hover:bg-[#222634] border border-white/[0.08] text-[12px] text-[#94A3B8] hover:text-white transition-colors whitespace-nowrap cursor-pointer shrink-0"
+                >
+                  {p}
+                </button>
+              ))}
             </div>
+
+            {/* Composer Form */}
+            <form
+              onSubmit={e => {
+                e.preventDefault()
+                handleSend(input)
+              }}
+              className="flex items-center gap-2"
+            >
+              <div className="flex-1">
+                <Input
+                  placeholder={
+                    activeMatch
+                      ? `Ask tactical questions about ${activeMatch.home_team.name} vs ${activeMatch.away_team.name}...`
+                      : 'Ask about formations, Elo models, tactical theory...'
+                  }
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  disabled={isThinking}
+                />
+              </div>
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={!input.trim() || isThinking}
+                className="h-[44px] px-4"
+              >
+                <Send size={16} />
+              </Button>
+            </form>
           </div>
         </div>
       </div>
     </div>
+  )
+}
+
+export default function AITacticalCenterPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-[#94A3B8]">Loading AI Tactical Center...</div>}>
+      <AIContent />
+    </Suspense>
   )
 }

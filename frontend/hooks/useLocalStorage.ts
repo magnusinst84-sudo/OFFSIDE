@@ -53,6 +53,15 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
   return [storedValue, setValue, isHydrated] as const
 }
 
+const ACCENT_MAP: Record<string, { soft: string; onAccent: string; name: string }> = {
+  '#00FF87': { soft: 'rgba(0, 255, 135, 0.12)', onAccent: '#050508', name: 'Emerald' },
+  '#3B82F6': { soft: 'rgba(59, 130, 246, 0.14)', onAccent: '#ffffff', name: 'Electric Blue' },
+  '#8B5CF6': { soft: 'rgba(139, 92, 246, 0.14)', onAccent: '#ffffff', name: 'Purple' },
+  '#7C3AED': { soft: 'rgba(124, 58, 237, 0.14)', onAccent: '#ffffff', name: 'Violet' },
+  '#F59E0B': { soft: 'rgba(245, 158, 11, 0.14)', onAccent: '#050508', name: 'Amber' },
+  '#E8003D': { soft: 'rgba(232, 0, 61, 0.14)', onAccent: '#ffffff', name: 'Rose' },
+}
+
 export function useSettings() {
   const [settings, setSettings, isHydrated] = useLocalStorage<AppSettings>(
     'offside-settings',
@@ -61,9 +70,34 @@ export function useSettings() {
 
   useEffect(() => {
     if (isHydrated && typeof document !== 'undefined') {
-      document.documentElement.style.setProperty('--accent', settings.accentColor)
+      const root = document.documentElement
+      const accent = settings.accentColor || '#00FF87'
+      const cfg = ACCENT_MAP[accent] || { soft: 'rgba(0, 255, 135, 0.12)', onAccent: '#050508', name: 'Custom' }
+      
+      root.style.setProperty('--color-accent', accent)
+      root.style.setProperty('--accent', accent)
+      root.style.setProperty('--color-accent-soft', cfg.soft)
+      root.style.setProperty('--color-on-accent', cfg.onAccent)
+
+      if (settings.theme === 'high-contrast') {
+        root.setAttribute('data-theme', 'high-contrast')
+      } else {
+        root.removeAttribute('data-theme')
+      }
+
+      if (settings.accessibility?.largeText) {
+        root.style.fontSize = '112.5%'
+      } else {
+        root.style.fontSize = ''
+      }
+
+      if (settings.reducedMotion || settings.motionIntensity === 'minimal') {
+        root.setAttribute('data-reduced-motion', 'true')
+      } else {
+        root.removeAttribute('data-reduced-motion')
+      }
     }
-  }, [settings.accentColor, isHydrated])
+  }, [settings, isHydrated])
 
   return { settings, setSettings, isHydrated }
 }
