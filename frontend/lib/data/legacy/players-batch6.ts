@@ -1,3 +1,6 @@
+// ════════════════════════════════════════════════════════════
+// Synthetic, model-generated demo analytics for the World Cup roster. Do not extend.
+// ════════════════════════════════════════════════════════════
 import type { Player, PlayerAttributes, RoleSuitability, ShotMapPoint } from './players-batch2'
 
 const mkAttrs = (a: Partial<PlayerAttributes>): PlayerAttributes => ({ pace: 70, dribbling: 70, passing: 70, shooting: 60, defending: 50, physicality: 65, ...a })

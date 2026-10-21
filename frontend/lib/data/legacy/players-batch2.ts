@@ -1,77 +1,18 @@
 // ════════════════════════════════════════════════════════════
+// Synthetic, model-generated demo analytics for the World Cup roster. Do not extend.
+// ════════════════════════════════════════════════════════════
 // OFFSIDE — Static Player Roster Extension (Batch 2)
 // ════════════════════════════════════════════════════════════
-// Adds: Norway, Ivory Coast, Sweden, Portugal, Spain
-// Same sourcing standard as players.ts batch 1 — names, clubs,
-// ages, caps, captaincy verified via real June 2026 FIFA squad
-// announcements. Stats/DNA/attributes are synthetic (demo AI layer).
-//
-// Append this file's exports into players.ts, or import alongside it.
-// Requires the same Player/PlayerAttributes/RoleSuitability/
-// ShotMapPoint types and mkAttrs/mkRole/mkShots/mkForm helpers
-// already defined in players.ts.
-// ════════════════════════════════════════════════════════════
 
-// Types are duplicated here (not imported from players.ts) to avoid
-// a circular import, since players.ts imports ALL_PLAYERS_BATCH2 from
-// this file. Keep these in sync with players.ts if the shape changes.
+import type {
+  LegacyPosition as Position,
+  LegacyPlayerAttributes as PlayerAttributes,
+  LegacyRoleSuitability as RoleSuitability,
+  LegacyShotMapPoint as ShotMapPoint,
+  LegacyPlayer as Player,
+} from '../types'
 
-export type Position = 'GK' | 'DF' | 'MF' | 'FW'
-
-export interface PlayerAttributes {
-  pace: number
-  dribbling: number
-  passing: number
-  shooting: number
-  defending: number
-  physicality: number
-}
-
-export interface RoleSuitability {
-  striker: number
-  winger: number
-  cam: number
-  cm: number
-}
-
-export interface ShotMapPoint {
-  x: number
-  y: number
-  outcome: 'goal' | 'on_target' | 'off_target' | 'blocked'
-  xg: number
-}
-
-export interface Player {
-  id: string
-  name: string
-  shirt_name: string
-  team: string
-  team_code: string
-  position: Position
-  number: number
-  club: string
-  age: number
-  height_cm: number
-  caps: number
-  is_captain?: boolean
-  goals: number
-  assists: number
-  xg: number
-  xa: number
-  minutes_played: number
-  shots: number
-  shots_on_target: number
-  pass_accuracy: number
-  dna_score: number
-  attributes: PlayerAttributes
-  strengths: string[]
-  weaknesses: string[]
-  role_suitability: RoleSuitability
-  predicted_impact: number
-  comparison_players: string[]
-  shot_map: ShotMapPoint[]
-  form_trend: number[]
-}
+export type { Position, PlayerAttributes, RoleSuitability, ShotMapPoint, Player }
 
 // Local helpers (duplicated from players.ts for the same reason above)
 const mkAttrs = (a: Partial<PlayerAttributes>): PlayerAttributes => ({

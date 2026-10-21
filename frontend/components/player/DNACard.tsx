@@ -1,10 +1,12 @@
+// ════════════════════════════════════════════════════════════
+// OFFSIDE — Legacy DNA Holographic Card (Legacy Players Only)
+// ════════════════════════════════════════════════════════════
 'use client'
-import React, { useState, useEffect } from 'react'
-import type { Player } from '@/lib/data/players'
-import { Skeleton } from '@/components/shared/Skeleton'
+import React, { useState } from 'react'
+import type { LegacyPlayer } from '@/lib/data/types'
 
 interface DNACardProps {
-  player: Player
+  player: LegacyPlayer
 }
 
 export function DNACard({ player }: DNACardProps) {

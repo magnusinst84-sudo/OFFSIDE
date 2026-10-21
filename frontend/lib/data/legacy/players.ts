@@ -1,20 +1,10 @@
 // ════════════════════════════════════════════════════════════
-// OFFSIDE — Static Player Roster + DNA Dataset
+// Synthetic, model-generated demo analytics for the World Cup roster. Do not extend.
 // ════════════════════════════════════════════════════════════
-// Source: Verified real international and top European club squad rosters
-// (Official squad declarations, UEFA, ESPN, domestic federation announcements).
-// Player names, clubs, positions, and caps are verified real.
-//
-// Stats (goals/assists/xG), DNA scores, attributes, strengths/
-// weaknesses, role suitability %, shot maps, and comparisons
-// are MODEL-GENERATED for demo purposes — clearly synthetic
-// analytics layered on top of real identities. This mirrors
-// exactly what a real AI scouting tool would output: real
-// player, AI-generated insight.
-//
-// Teams included match the mock match data in matches.py:
-// Germany, Paraguay, Netherlands, Morocco, France, Sweden,
-// Brazil, Argentina, Mexico, England, Belgium, USA
+// OFFSIDE — Static Player Roster + DNA Dataset (Legacy)
+// ════════════════════════════════════════════════════════════
+// Source: Verified real international squad rosters.
+// Stats/DNA scores are MODEL-GENERATED for demo purposes.
 // ════════════════════════════════════════════════════════════
 
 import { ALL_PLAYERS_BATCH2, TEAMS_IN_ROSTER_BATCH2 } from './players-batch2'
@@ -23,66 +13,16 @@ import { ALL_PLAYERS_BATCH4 } from './players-batch4'
 import { BATCH5_PLAYERS } from './players-batch5'
 import { BATCH6_PLAYERS } from './players-batch6'
 import { BATCH7_PLAYERS } from './players-batch7'
-import { BATCH8_PLAYERS } from './players-batch8'
 
-export type Position = 'GK' | 'DF' | 'MF' | 'FW'
+import type {
+  LegacyPosition as Position,
+  LegacyPlayerAttributes as PlayerAttributes,
+  LegacyRoleSuitability as RoleSuitability,
+  LegacyShotMapPoint as ShotMapPoint,
+  LegacyPlayer as Player,
+} from '../types'
 
-export interface PlayerAttributes {
-  pace: number
-  dribbling: number
-  passing: number
-  shooting: number
-  defending: number
-  physicality: number
-}
-
-export interface RoleSuitability {
-  striker: number
-  winger: number
-  cam: number
-  cm: number
-}
-
-export interface ShotMapPoint {
-  x: number // 0-100, pitch width
-  y: number // 0-100, pitch length (half pitch, 50 = edge of box)
-  outcome: 'goal' | 'on_target' | 'off_target' | 'blocked'
-  xg: number
-}
-
-export interface Player {
-  id: string
-  name: string
-  shirt_name: string
-  team: string
-  team_code: string
-  position: Position
-  number: number
-  club: string
-  age: number
-  height_cm: number
-  caps: number
-  is_captain?: boolean
-  // Synthetic season stats (demo)
-  goals: number
-  assists: number
-  xg: number
-  xa: number
-  minutes_played: number
-  shots: number
-  shots_on_target: number
-  pass_accuracy: number
-  // AI DNA layer (synthetic)
-  dna_score: number
-  attributes: PlayerAttributes
-  strengths: string[]
-  weaknesses: string[]
-  role_suitability: RoleSuitability
-  predicted_impact: number
-  comparison_players: string[]
-  shot_map: ShotMapPoint[]
-  form_trend: number[] // last 8 data points, 0-100
-}
+export type { Position, PlayerAttributes, RoleSuitability, ShotMapPoint, Player }
 
 // ────────────────────────────────────────────────────────────
 // Helper to keep entries terse below
@@ -617,7 +557,6 @@ export const ALL_PLAYERS: Player[] = [
   ...BATCH5_PLAYERS,
   ...BATCH6_PLAYERS,
   ...BATCH7_PLAYERS,
-  ...BATCH8_PLAYERS,
 ]
 
 // ────────────────────────────────────────────────────────────
