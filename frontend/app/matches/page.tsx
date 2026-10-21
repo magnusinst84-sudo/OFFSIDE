@@ -16,7 +16,34 @@ const LEAGUES = [
   { id: 'bundesliga', label: 'Bundesliga' },
   { id: 'seriea', label: 'Serie A' },
   { id: 'ligue1', label: 'Ligue 1' },
+  { id: 'superlig', label: 'Süper Lig' },
+  { id: 'proleague', label: 'Pro League' },
 ]
+
+function isDisallowedMatch(m: Match): boolean {
+  const text = `${m.competition || ''} ${m.home_team?.name || ''} ${m.away_team?.name || ''}`.toLowerCase()
+  const homeName = (m.home_team?.name || '').toLowerCase()
+  const awayName = (m.away_team?.name || '').toLowerCase()
+
+  const EXCLUDE_WOMEN = [
+    'women', 'woman', "women's", 'feminin', 'feminine', 'femenin', 'femenina', 'femenil',
+    'frauen', 'damen', 'nwsl', 'wsl', 'wleague', 'damallsvenskan', 'naisliiga',
+    'keuken', 'ladies', ' wfc', ' fc women', ' (w)', ' w)'
+  ]
+  if (EXCLUDE_WOMEN.some(k => text.includes(k))) return true
+  if (homeName.endsWith(' w') || awayName.endsWith(' w') ||
+      homeName.endsWith(' women') || awayName.endsWith(' women') ||
+      homeName.endsWith(' ladies') || awayName.endsWith(' ladies') ||
+      homeName.endsWith(' (w)') || awayName.endsWith(' (w)')) return true
+
+  const EXCLUDE_GLOBAL = [
+    'mls', 'major league soccer', 'liga mx', 'saudi', 'roshn', 'j-league',
+    'a-league', 'k league', 'chinese super', 'csl', 'indian super', 'isl',
+    'conmebol', 'concacaf', 'copa libertadores', 'copa sudamericana'
+  ]
+  if (EXCLUDE_GLOBAL.some(k => text.includes(k))) return true
+  return false
+}
 
 function MatchesContent() {
   const searchParams = useSearchParams()
@@ -37,20 +64,24 @@ function MatchesContent() {
       ? upcomingMatches
       : finishedMatches
 
-  // Filter by selected league
+  // Filter by selected league and strictly exclude women & non-European matches
   const filteredMatches = useMemo(() => {
-    if (selectedLeague === 'all') return currentList
-    return currentList.filter((m: Match) => {
-      const comp = (m.competition || '').toLowerCase()
-      if (selectedLeague === 'ucl') return comp.includes('champions') || comp.includes('ucl')
-      if (selectedLeague === 'uel') return comp.includes('europa') || comp.includes('uel')
-      if (selectedLeague === 'epl') return comp.includes('premier') || comp.includes('epl')
-      if (selectedLeague === 'laliga') return comp.includes('la liga') || comp.includes('laliga')
-      if (selectedLeague === 'bundesliga') return comp.includes('bundesliga')
-      if (selectedLeague === 'seriea') return comp.includes('serie a')
-      if (selectedLeague === 'ligue1') return comp.includes('ligue 1')
-      return true
-    })
+    return currentList
+      .filter((m: Match) => !isDisallowedMatch(m))
+      .filter((m: Match) => {
+        if (selectedLeague === 'all') return true
+        const comp = (m.competition || '').toLowerCase()
+        if (selectedLeague === 'ucl') return comp.includes('champions') || comp.includes('ucl')
+        if (selectedLeague === 'uel') return comp.includes('europa') || comp.includes('uel')
+        if (selectedLeague === 'epl') return comp.includes('premier') || comp.includes('epl')
+        if (selectedLeague === 'laliga') return comp.includes('la liga') || comp.includes('laliga')
+        if (selectedLeague === 'bundesliga') return comp.includes('bundesliga')
+        if (selectedLeague === 'seriea') return comp.includes('serie a')
+        if (selectedLeague === 'ligue1') return comp.includes('ligue 1')
+        if (selectedLeague === 'superlig') return comp.includes('super lig') || comp.includes('süper lig')
+        if (selectedLeague === 'proleague') return comp.includes('pro league') || comp.includes('jupiler')
+        return true
+      })
   }, [currentList, selectedLeague])
 
   // Group by competition

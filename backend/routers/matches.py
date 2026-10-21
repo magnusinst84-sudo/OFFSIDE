@@ -284,65 +284,157 @@ def fmt_match(f: dict) -> dict:
 # ---------------------------------------------------------------------------
 # Top European Tournaments & Domestic Cups
 # ---------------------------------------------------------------------------
-# UCL (2), UEL (3), UECL (848)
+# UCL (2), UEL (3), UECL (848), UEFA Super Cup (531)
 # Premier League (39), FA Cup (45), EFL Cup (48)
-# La Liga (140), Copa del Rey (143)
-# Bundesliga (78), DFB Pokal (81)
-# Serie A (135), Coppa Italia (137)
-# Ligue 1 (61), Coupe de France (66)
-TOP_LEAGUE_IDS = {2, 3, 848, 39, 45, 48, 140, 143, 78, 81, 135, 137, 61, 66}
+# La Liga (140), Copa del Rey (143), Supercopa (556)
+# Bundesliga (78), DFB Pokal (81), DFL-Supercup (529)
+# Serie A (135), Coppa Italia (137), Supercoppa (547)
+# Ligue 1 (61), Coupe de France (66), Trophée des Champions (526)
+# Turkish Süper Lig (203), Türkiye Kupası (205)
+# Belgian Pro League (144), Belgian Cup (147)
+# Dutch Eredivisie (88), KNVB Beker (90)
+# Portuguese Primeira Liga (94), Taça de Portugal (96)
+# Scottish Premiership (179)
+TOP_LEAGUE_IDS = {
+    2, 3, 848, 531,
+    39, 45, 48,
+    140, 143, 556,
+    78, 81, 529,
+    135, 137, 547,
+    61, 66, 526,
+    203, 205,
+    144, 147,
+    88, 90,
+    94, 96,
+    179,
+}
 
 def is_top_flight(f: dict) -> bool:
     league = f.get("league", {})
     lid = league.get("id")
-    if lid in TOP_LEAGUE_IDS:
-        return True
-    
     country = (league.get("country") or "").lower()
     lname = (league.get("name") or "").lower()
+    home_name = (f.get("teams", {}).get("home", {}).get("name") or "").lower()
+    away_name = (f.get("teams", {}).get("away", {}).get("name") or "").lower()
+    all_text = f"{lname} {country} {home_name} {away_name}"
 
-    # STRICT EXCLUSIONS: Youth, U21/U23/U19, Reserves, CAF/Africa, Women, Friendly
-    EXCLUDE_KEYWORDS = [
-        "u21", "u23", "u19", "u20", "u18", "u17", "youth", "reserve", "reserves",
-        "caf", "africa", "afcon", "women", "feminin", "friendly", "amateur"
+    # ── 1. STRICT EXCLUSIONS FIRST (Checked against league & team names) ─────
+    # Women's football (explicit keyword check + team suffix check)
+    EXCLUDE_WOMEN = [
+        "women", "woman", "women's", "feminin", "feminine", "femenin", "femenina", "femenil",
+        "frauen", "damen", "nwsl", "wsl", "wleague", "damallsvenskan", "naisliiga",
+        "keuken", "ladies", " wfc", " fc women", " (w)", " w)"
     ]
-    if any(k in lname for k in EXCLUDE_KEYWORDS):
+    if any(k in all_text for k in EXCLUDE_WOMEN):
+        return False
+    if home_name.endswith(" w") or away_name.endswith(" w") or \
+       home_name.endswith(" women") or away_name.endswith(" women") or \
+       home_name.endswith(" ladies") or away_name.endswith(" ladies") or \
+       home_name.endswith(" (w)") or away_name.endswith(" (w)"):
         return False
 
-    # English Premier League and top domestic cups only (exclude Premier League 2 / Development)
-    if country in ("england", "united kingdom"):
-        if "premier league 2" in lname or "development" in lname:
-            return False
-        if any(k in lname for k in ["premier league", "fa cup", "efl cup", "carabao cup"]):
-            return True
+    # Youth / Reserve / Amateur
+    EXCLUDE_YOUTH = [
+        "u21", "u23", "u19", "u20", "u18", "u17", "u16",
+        "youth", "reserve", "reserves", "development", "b team", " amateur", " ii"
+    ]
+    if any(k in all_text for k in EXCLUDE_YOUTH):
+        return False
+    if home_name.endswith(" b") or away_name.endswith(" b") or \
+       home_name.endswith(" ii") or away_name.endswith(" ii"):
+        return False
 
-    # UEFA Elite competitions only (Champions League, Europa League, Conference League)
+    # Non-European / Lower / Outside leagues
+    EXCLUDE_GLOBAL = [
+        "mls", "major league soccer", "liga mx", "primera division de mexico",
+        "saudi", "roshn", "j-league", "j1 league", "a-league", "k league",
+        "chinese super", "csl", "indian super", "isl",
+        "conmebol", "concacaf", "caf", "ofc", "afc champions",
+        "copa libertadores", "copa sudamericana", "champions cup",
+        "africa", "afcon", "caf champions",
+        "friendly", "club friendly", "international friendly",
+        "nfl", "futsal"
+    ]
+    if any(k in all_text for k in EXCLUDE_GLOBAL):
+        return False
+
+    # ── 2. TOP LEAGUE IDS (Elite verified European competitions) ──────────────
+    if lid in TOP_LEAGUE_IDS:
+        return True
+
+    # ── 3. ALLOWLIST BY COUNTRY / COMPETITION ──────────────────────────────────
+    # UEFA Elite competitions
     if country in ("world", "europe") or "uefa" in lname:
-        if any(k in lname for k in ["uefa champions league", "champions league", "uefa europa league", "europa league", "conference league"]):
-            # Double check it is not CAF, AFC, or youth
-            if not any(k in lname for k in ["caf", "afc", "concacaf", "ofc", "youth"]):
+        if any(k in lname for k in ["champions league", "europa league", "conference league", "super cup"]):
+            return True
+        return False
+
+    # England
+    if country in ("england", "united kingdom"):
+        if any(k in lname for k in ["premier league", "fa cup", "efl cup", "carabao cup", "community shield"]):
+            if "2" not in lname and "development" not in lname and "trophy" not in lname:
                 return True
+        return False
 
-    # Spain (La Liga & Copa del Rey only - exclude 2a division/RFEF)
+    # Spain
     if country == "spain":
-        if any(k in lname for k in ["la liga", "primera división", "copa del rey"]) and "2" not in lname and "hyper" not in lname:
-            return True
+        if any(k in lname for k in ["la liga", "primera division", "copa del rey", "supercopa"]):
+            if "2" not in lname and "hyper" not in lname and "rfef" not in lname:
+                return True
+        return False
 
-    # Germany (Bundesliga & DFB-Pokal - exclude 2. Bundesliga)
+    # Germany
     if country == "germany":
-        if ("bundesliga" in lname and "2" not in lname) or "dfb-pokal" in lname or "dfb pokal" in lname:
+        if ("bundesliga" in lname and "2" not in lname and "3" not in lname) \
+                or "dfb-pokal" in lname or "dfb pokal" in lname or "dfl-supercup" in lname:
             return True
+        return False
 
-    # Italy (Serie A & Coppa Italia only)
+    # Italy
     if country == "italy":
-        if ("serie a" in lname and "femminile" not in lname) or "coppa italia" in lname:
+        if ("serie a" in lname and "femminile" not in lname and "serie b" not in lname) \
+                or "coppa italia" in lname or "supercoppa" in lname:
             return True
+        return False
 
-    # France (Ligue 1 & Coupe de France only)
+    # France
     if country == "france":
-        if ("ligue 1" in lname and "2" not in lname) or "coupe de france" in lname:
+        if ("ligue 1" in lname and "2" not in lname and "feminine" not in lname) \
+                or "coupe de france" in lname or "trophee des champions" in lname:
             return True
+        return False
 
+    # Turkey (Süper Lig & Cup)
+    if country in ("turkey", "türkiye") or "super lig" in lname or "süper lig" in lname:
+        if "1. lig" not in lname and "2. lig" not in lname:
+            return True
+        return False
+
+    # Belgium (Pro League & Cup)
+    if country == "belgium" or "pro league" in lname or "jupiler" in lname:
+        if "challenger" not in lname and "1b" not in lname:
+            return True
+        return False
+
+    # Netherlands (Eredivisie & Cup)
+    if country in ("netherlands", "holland") or "eredivisie" in lname:
+        if "eerste" not in lname:
+            return True
+        return False
+
+    # Portugal (Primeira Liga & Cup)
+    if country == "portugal" or "primeira liga" in lname:
+        if "segunda" not in lname and "liga 2" not in lname:
+            return True
+        return False
+
+    # Scotland (Premiership)
+    if country == "scotland" or "scottish premiership" in lname:
+        if "championship" not in lname and "league one" not in lname:
+            return True
+        return False
+
+    # Everything else: blocked
     return False
 
 # ---------------------------------------------------------------------------

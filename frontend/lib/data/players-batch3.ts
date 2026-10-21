@@ -93,15 +93,6 @@ const COLOMBIA_PLAYERS: Player[] = [
     role_suitability: mkRole({ winger: 95, striker: 70 }), predicted_impact: 8.6, comparison_players: ['Sadio Mané'],
     shot_map: mkShots(35, 25), form_trend: [86, 87, 85, 88, 87]
   },
-  {
-    id: 'col-rios', name: 'Richard Ríos', shirt_name: 'RÍOS', team: 'Colombia', team_code: 'COL',
-    position: 'MF', number: 6, club: 'Palmeiras', age: 26, height_cm: 185, caps: 20,
-    goals: 2, assists: 3, xg: 1.5, xa: 2.1, minutes_played: 1400, shots: 15, shots_on_target: 5, pass_accuracy: 85.2,
-    dna_score: 81, attributes: mkAttrs({ passing: 81, defending: 79, physicality: 83, dribbling: 84 }),
-    strengths: ['Ball Carrying', 'Tackling', 'Flair'], weaknesses: ['Consistency', 'Positioning'],
-    role_suitability: mkRole({ cm: 85 }), predicted_impact: 7.8, comparison_players: ['Yves Bissouma'],
-    shot_map: mkShots(10), form_trend: [79, 81, 82, 80, 81]
-  }
 ]
 
 const JAPAN_PLAYERS: Player[] = [
@@ -166,15 +157,6 @@ const KOREA_PLAYERS: Player[] = [
 
 const SENEGAL_PLAYERS: Player[] = [
   {
-    id: 'sen-mane', name: 'Sadio Mané', shirt_name: 'MANÉ', team: 'Senegal', team_code: 'SEN',
-    position: 'FW', number: 10, club: 'Al Nassr', age: 34, height_cm: 174, caps: 105,
-    goals: 40, assists: 25, xg: 32.5, xa: 18.2, minutes_played: 8500, shots: 210, shots_on_target: 95, pass_accuracy: 79.5,
-    dna_score: 85, attributes: mkAttrs({ pace: 85, dribbling: 86, shooting: 84, physicality: 78 }),
-    strengths: ['Positioning', 'Finishing', 'Leadership'], weaknesses: ['Declining Pace'],
-    role_suitability: mkRole({ winger: 85, striker: 80 }), predicted_impact: 8.4, comparison_players: ['Son Heung-min'],
-    shot_map: mkShots(45), form_trend: [84, 85, 84, 86, 85]
-  },
-  {
     id: 'sen-sarr', name: 'Pape Matar Sarr', shirt_name: 'SARR', team: 'Senegal', team_code: 'SEN',
     position: 'MF', number: 15, club: 'Tottenham', age: 23, height_cm: 185, caps: 25,
     goals: 4, assists: 5, xg: 3.1, xa: 3.5, minutes_played: 1800, shots: 25, shots_on_target: 8, pass_accuracy: 87.5,
@@ -183,16 +165,8 @@ const SENEGAL_PLAYERS: Player[] = [
     role_suitability: mkRole({ cm: 88, cam: 70 }), predicted_impact: 8.0, comparison_players: ['Amadou Onana'],
     shot_map: mkShots(10), form_trend: [80, 81, 83, 82, 82]
   },
-  {
-    id: 'sen-koulibaly', name: 'Kalidou Koulibaly', shirt_name: 'KOULIBALY', team: 'Senegal', team_code: 'SEN',
-    position: 'DF', number: 3, club: 'Al Hilal', age: 34, height_cm: 186, caps: 80,
-    goals: 1, assists: 2, xg: 0.8, xa: 1.1, minutes_played: 7000, shots: 10, shots_on_target: 3, pass_accuracy: 88.5,
-    dna_score: 83, attributes: mkAttrs({ defending: 86, physicality: 89, pace: 70 }),
-    strengths: ['Strength', 'Tackling', 'Leadership'], weaknesses: ['Pace'],
-    role_suitability: mkRole({ cm: 20 }), predicted_impact: 8.1, comparison_players: ['Virgil van Dijk'],
-    shot_map: mkShots(5), form_trend: [82, 83, 82, 84, 83]
-  }
 ]
+
 
 const CANADA_PLAYERS: Player[] = [
   {

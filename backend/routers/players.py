@@ -10,27 +10,30 @@ API_FOOTBALL_BASE = "https://v3.football.api-sports.io"
 HEADERS = {"x-apisports-key": API_FOOTBALL_KEY}
 
 TOP_PLAYERS = [
-    {"id": 1100, "name": "Lionel Messi", "team": "Argentina", "position": "Forward", "nationality": "Argentine", "number": 10},
-    {"id": 1101, "name": "Kylian Mbappé", "team": "France", "position": "Forward", "nationality": "French", "number": 10},
-    {"id": 1102, "name": "Vinicius Jr.", "team": "Brazil", "position": "Forward", "nationality": "Brazilian", "number": 7},
-    {"id": 1103, "name": "Erling Haaland", "team": "Norway", "position": "Forward", "nationality": "Norwegian", "number": 9},
-    {"id": 1104, "name": "Pedri", "team": "Spain", "position": "Midfielder", "nationality": "Spanish", "number": 8},
-    {"id": 1105, "name": "Jude Bellingham", "team": "England", "position": "Midfielder", "nationality": "English", "number": 10},
-    {"id": 1106, "name": "Lamine Yamal", "team": "Spain", "position": "Forward", "nationality": "Spanish", "number": 19},
-    {"id": 1107, "name": "Bukayo Saka", "team": "England", "position": "Forward", "nationality": "English", "number": 7},
-    {"id": 1108, "name": "Phil Foden", "team": "England", "position": "Midfielder", "nationality": "English", "number": 11},
-    {"id": 1109, "name": "Gavi", "team": "Spain", "position": "Midfielder", "nationality": "Spanish", "number": 6},
-    {"id": 1110, "name": "Rodri", "team": "Spain", "position": "Midfielder", "nationality": "Spanish", "number": 16},
-    {"id": 1111, "name": "Federico Valverde", "team": "Uruguay", "position": "Midfielder", "nationality": "Uruguayan", "number": 8},
-    {"id": 1112, "name": "Darwin Núñez", "team": "Uruguay", "position": "Forward", "nationality": "Uruguayan", "number": 9},
-    {"id": 1113, "name": "Antoine Griezmann", "team": "France", "position": "Forward", "nationality": "French", "number": 7},
-    {"id": 1114, "name": "Harry Kane", "team": "England", "position": "Forward", "nationality": "English", "number": 9},
+    {"id": 1100, "name": "Florian Wirtz", "team": "Germany", "position": "Midfielder", "nationality": "German", "number": 10, "club": "Bayer Leverkusen"},
+    {"id": 1101, "name": "Kylian Mbappé", "team": "France", "position": "Forward", "nationality": "French", "number": 10, "club": "Real Madrid"},
+    {"id": 1102, "name": "Vinicius Jr.", "team": "Brazil", "position": "Forward", "nationality": "Brazilian", "number": 7, "club": "Real Madrid"},
+    {"id": 1103, "name": "Erling Haaland", "team": "Norway", "position": "Forward", "nationality": "Norwegian", "number": 9, "club": "Manchester City"},
+    {"id": 1104, "name": "Pedri", "team": "Spain", "position": "Midfielder", "nationality": "Spanish", "number": 8, "club": "Barcelona"},
+    {"id": 1105, "name": "Jude Bellingham", "team": "England", "position": "Midfielder", "nationality": "English", "number": 10, "club": "Real Madrid"},
+    {"id": 1106, "name": "Lamine Yamal", "team": "Spain", "position": "Forward", "nationality": "Spanish", "number": 19, "club": "Barcelona"},
+    {"id": 1107, "name": "Bukayo Saka", "team": "England", "position": "Forward", "nationality": "English", "number": 7, "club": "Arsenal"},
+    {"id": 1108, "name": "Phil Foden", "team": "England", "position": "Midfielder", "nationality": "English", "number": 11, "club": "Manchester City"},
+    {"id": 1109, "name": "Gavi", "team": "Spain", "position": "Midfielder", "nationality": "Spanish", "number": 6, "club": "Barcelona"},
+    {"id": 1110, "name": "Rodri", "team": "Spain", "position": "Midfielder", "nationality": "Spanish", "number": 16, "club": "Manchester City"},
+    {"id": 1111, "name": "Federico Valverde", "team": "Uruguay", "position": "Midfielder", "nationality": "Uruguayan", "number": 8, "club": "Real Madrid"},
+    {"id": 1112, "name": "Darwin Núñez", "team": "Uruguay", "position": "Forward", "nationality": "Uruguayan", "number": 9, "club": "Liverpool"},
+    {"id": 1113, "name": "Antoine Griezmann", "team": "France", "position": "Forward", "nationality": "French", "number": 7, "club": "Atletico Madrid"},
+    {"id": 1114, "name": "Harry Kane", "team": "England", "position": "Forward", "nationality": "English", "number": 9, "club": "Bayern Munich"},
+    {"id": 1115, "name": "Mohamed Salah", "team": "Egypt", "position": "Forward", "nationality": "Egyptian", "number": 11, "club": "Liverpool"},
+    {"id": 1116, "name": "Victor Osimhen", "team": "Nigeria", "position": "Forward", "nationality": "Nigerian", "number": 9, "club": "Galatasaray"},
 ]
 
 DNA_PROFILES = {
-    1100: {"dna_score": 97, "strengths": ["Vision", "Dribbling", "Free kicks", "Positioning"], "weaknesses": ["Aerial duels", "Pressing intensity"], "role_suitability": {"striker": 85, "winger": 78, "cam": 99, "cm": 60}, "attributes": {"pace": 80, "dribbling": 99, "passing": 96, "shooting": 92, "defending": 35, "physicality": 65}, "predicted_impact": 9.4, "comparison_players": ["Ronaldinho", "Zidane", "Maradona"]},
+    1100: {"dna_score": 93, "strengths": ["Vision", "Chance Creation", "Dribbling in Tight Spaces", "Key Passes"], "weaknesses": ["Aerial Duels"], "role_suitability": {"striker": 70, "winger": 88, "cam": 97, "cm": 82}, "attributes": {"pace": 83, "dribbling": 92, "passing": 92, "shooting": 85, "defending": 52, "physicality": 70}, "predicted_impact": 9.1, "comparison_players": ["Kevin De Bruyne", "Mesut Özil"]},
     1101: {"dna_score": 96, "strengths": ["Pace", "Clinical finishing", "1v1", "Big game temperament"], "weaknesses": ["Aerial positioning", "Tracking back"], "role_suitability": {"striker": 94, "winger": 98, "cam": 72, "cm": 45}, "attributes": {"pace": 99, "dribbling": 92, "passing": 80, "shooting": 95, "defending": 42, "physicality": 76}, "predicted_impact": 9.2, "comparison_players": ["Thierry Henry", "Ronaldo R9", "George Weah"]},
     1102: {"dna_score": 94, "strengths": ["Pace", "Dribbling", "Creativity", "Pressing"], "weaknesses": ["Consistency", "Long-range shooting"], "role_suitability": {"striker": 78, "winger": 98, "cam": 82, "cm": 50}, "attributes": {"pace": 97, "dribbling": 95, "passing": 82, "shooting": 84, "defending": 40, "physicality": 74}, "predicted_impact": 8.9, "comparison_players": ["Ronaldo R9", "Romário", "Robinho"]},
+    1103: {"dna_score": 95, "strengths": ["Predatory Finishing", "Aerial Threat", "Acceleration"], "weaknesses": ["Build-up Play"], "role_suitability": {"striker": 99, "winger": 20, "cam": 30, "cm": 15}, "attributes": {"pace": 89, "dribbling": 76, "passing": 68, "shooting": 97, "defending": 45, "physicality": 90}, "predicted_impact": 9.2, "comparison_players": ["Ruud van Nistelrooy", "Marco van Basten"]},
 }
 
 def compute_dynamic_dna(stats: dict, position: str = "") -> dict:

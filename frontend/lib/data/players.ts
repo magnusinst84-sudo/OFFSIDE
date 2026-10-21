@@ -22,6 +22,8 @@ import { ALL_PLAYERS_BATCH3, TEAMS_IN_ROSTER_BATCH3 } from './players-batch3'
 import { ALL_PLAYERS_BATCH4 } from './players-batch4'
 import { BATCH5_PLAYERS } from './players-batch5'
 import { BATCH6_PLAYERS } from './players-batch6'
+import { BATCH7_PLAYERS } from './players-batch7'
+import { BATCH8_PLAYERS } from './players-batch8'
 
 export type Position = 'GK' | 'DF' | 'MF' | 'FW'
 
@@ -312,22 +314,6 @@ export const BRAZIL_PLAYERS: Player[] = [
     form_trend: mkForm(84),
   },
   {
-    id: 'bra-neymar', name: 'Neymar', shirt_name: 'NEYMAR',
-    team: 'Brazil', team_code: 'BRA', position: 'FW', number: 9,
-    club: 'Santos', age: 34, height_cm: 175, caps: 134,
-    goals: 1, assists: 2, xg: 1.3, xa: 1.8, minutes_played: 150,
-    shots: 7, shots_on_target: 3, pass_accuracy: 86,
-    dna_score: 81,
-    attributes: mkAttrs({ pace: 68, dribbling: 90, passing: 86, shooting: 75, defending: 25, physicality: 60 }),
-    strengths: ['Elite vision and creativity in tight spaces', 'Tournament experience and big-game pedigree', 'Free-kick specialist'],
-    weaknesses: ['Recent injury history limits sharpness', 'Reduced pace compared to peak years'],
-    role_suitability: mkRole({ cam: 85, winger: 70, striker: 45, cm: 30 }),
-    predicted_impact: 78,
-    comparison_players: ['Lionel Messi', 'Ángel Di María'],
-    shot_map: mkShots(5, 50),
-    form_trend: mkForm(70),
-  },
-  {
     id: 'bra-marquinhos', name: 'Marquinhos', shirt_name: 'MARQUINHOS',
     team: 'Brazil', team_code: 'BRA', position: 'DF', number: 4,
     club: 'Paris Saint-Germain', age: 31, height_cm: 183, caps: 96, is_captain: true,
@@ -349,22 +335,6 @@ export const BRAZIL_PLAYERS: Player[] = [
 // ARGENTINA — Group J (verified squad, defending champions)
 // ════════════════════════════════════════════════════════════
 export const ARGENTINA_PLAYERS: Player[] = [
-  {
-    id: 'arg-messi', name: 'Lionel Messi', shirt_name: 'MESSI',
-    team: 'Argentina', team_code: 'ARG', position: 'FW', number: 10,
-    club: 'Inter Miami', age: 38, height_cm: 170, caps: 196, is_captain: true,
-    goals: 3, assists: 4, xg: 2.4, xa: 3.5, minutes_played: 240,
-    shots: 12, shots_on_target: 7, pass_accuracy: 88,
-    dna_score: 94,
-    attributes: mkAttrs({ pace: 62, dribbling: 92, passing: 90, shooting: 86, defending: 25, physicality: 55 }),
-    strengths: ['Unmatched game intelligence and vision', 'Set-piece and free-kick mastery', 'Defending World Cup champion experience'],
-    weaknesses: ['Reduced top-speed at 38', 'Limited defensive contribution off the ball'],
-    role_suitability: mkRole({ cam: 90, striker: 60, winger: 65, cm: 35 }),
-    predicted_impact: 91,
-    comparison_players: ['Neymar', 'Kevin De Bruyne'],
-    shot_map: mkShots(9, 50),
-    form_trend: mkForm(86),
-  },
   {
     id: 'arg-martinez', name: 'Lautaro Martínez', shirt_name: 'L. MARTINEZ',
     team: 'Argentina', team_code: 'ARG', position: 'FW', number: 22,
@@ -489,22 +459,6 @@ export const NETHERLANDS_PLAYERS: Player[] = [
     shot_map: mkShots(6, 48),
     form_trend: mkForm(83),
   },
-  {
-    id: 'ned-depay', name: 'Memphis Depay', shirt_name: 'DEPAY',
-    team: 'Netherlands', team_code: 'NED', position: 'FW', number: 9,
-    club: 'Corinthians', age: 32, height_cm: 176, caps: 102,
-    goals: 3, assists: 1, xg: 2.4, xa: 0.6, minutes_played: 240,
-    shots: 11, shots_on_target: 6, pass_accuracy: 78,
-    dna_score: 83,
-    attributes: mkAttrs({ pace: 80, dribbling: 84, passing: 80, shooting: 84, defending: 30, physicality: 75 }),
-    strengths: ['Versatile movement across the front line', 'Dead-ball specialist', 'Netherlands all-time top scorer pedigree'],
-    weaknesses: ['Decision-making consistency varies'],
-    role_suitability: mkRole({ striker: 80, winger: 65, cam: 55, cm: 15 }),
-    predicted_impact: 80,
-    comparison_players: ['Memphis-tier — Dušan Vlahović', 'Randal Kolo Muani'],
-    shot_map: mkShots(8, 50),
-    form_trend: mkForm(78),
-  },
 ]
 
 // ════════════════════════════════════════════════════════════
@@ -543,22 +497,6 @@ export const MOROCCO_PLAYERS: Player[] = [
     shot_map: mkShots(7, 50),
     form_trend: mkForm(83),
   },
-  {
-    id: 'mar-bounou', name: 'Yassine Bounou', shirt_name: 'BOUNOU',
-    team: 'Morocco', team_code: 'MAR', position: 'GK', number: 1,
-    club: 'Al-Hilal', age: 35, height_cm: 192, caps: 67,
-    goals: 0, assists: 0, xg: 0, xa: 0, minutes_played: 270,
-    shots: 0, shots_on_target: 0, pass_accuracy: 81,
-    dna_score: 87,
-    attributes: mkAttrs({ pace: 48, dribbling: 55, passing: 79, shooting: 15, defending: 90, physicality: 75 }),
-    strengths: ['2022 semi-final tournament experience', 'Excellent distribution starting attacks', 'Composed under sustained pressure'],
-    weaknesses: ['Reduced explosiveness for reaction saves at 35'],
-    role_suitability: mkRole({ striker: 0, winger: 0, cam: 0, cm: 0 }),
-    predicted_impact: 83,
-    comparison_players: ['Mike Maignan', 'Emiliano Martínez'],
-    shot_map: [],
-    form_trend: mkForm(84),
-  },
 ]
 
 // ════════════════════════════════════════════════════════════
@@ -580,22 +518,6 @@ export const MEXICO_PLAYERS: Player[] = [
     comparison_players: ['Casemiro', 'Manuel Ugarte'],
     shot_map: mkShots(3, 45),
     form_trend: mkForm(80),
-  },
-  {
-    id: 'mex-ochoa', name: 'Guillermo Ochoa', shirt_name: 'OCHOA',
-    team: 'Mexico', team_code: 'MEX', position: 'GK', number: 13,
-    club: 'AEL Limassol', age: 40, height_cm: 183, caps: 145,
-    goals: 0, assists: 0, xg: 0, xa: 0, minutes_played: 180,
-    shots: 0, shots_on_target: 0, pass_accuracy: 75,
-    dna_score: 76,
-    attributes: mkAttrs({ pace: 40, dribbling: 50, passing: 72, shooting: 10, defending: 82, physicality: 70 }),
-    strengths: ['Veteran World Cup big-game experience', 'Vocal organiser of young back line'],
-    weaknesses: ['Reduced reflexes — likely rotation option at 40'],
-    role_suitability: mkRole({ striker: 0, winger: 0, cam: 0, cm: 0 }),
-    predicted_impact: 68,
-    comparison_players: ['Manuel Neuer (veteran tier)', 'Tim Howard (historical)'],
-    shot_map: [],
-    form_trend: mkForm(65),
   },
 ]
 
@@ -694,6 +616,8 @@ export const ALL_PLAYERS: Player[] = [
   ...ALL_PLAYERS_BATCH4,
   ...BATCH5_PLAYERS,
   ...BATCH6_PLAYERS,
+  ...BATCH7_PLAYERS,
+  ...BATCH8_PLAYERS,
 ]
 
 // ────────────────────────────────────────────────────────────
@@ -715,9 +639,6 @@ export const searchPlayersLocal = (query: string): Player[] => {
 export const getPlayersByTeam = (teamCode: string): Player[] =>
   ALL_PLAYERS.filter(p => p.team_code === teamCode)
 
-export const TEAMS_IN_ROSTER = [
-  'Germany', 'France', 'Brazil', 'Argentina', 'England',
-  'Netherlands', 'Morocco', 'Mexico', 'Belgium', 'United States',
-  ...TEAMS_IN_ROSTER_BATCH2,
-  ...TEAMS_IN_ROSTER_BATCH3,
-]
+export const TEAMS_IN_ROSTER = Array.from(
+  new Set(ALL_PLAYERS.map(p => p.team))
+).sort()

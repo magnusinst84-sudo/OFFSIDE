@@ -154,20 +154,20 @@ export const NORWAY_PLAYERS: Player[] = [
 // ════════════════════════════════════════════════════════════
 export const IVORY_COAST_PLAYERS: Player[] = [
   {
-    id: 'civ-kessie', name: 'Franck Kessié', shirt_name: 'KESSIE',
+    id: 'civ-sangare', name: 'Ibrahim Sangaré', shirt_name: 'SANGARÉ',
     team: 'Ivory Coast', team_code: 'CIV', position: 'MF', number: 6,
-    club: 'Al-Ahli', age: 29, height_cm: 181, caps: 56, is_captain: true,
-    goals: 1, assists: 1, xg: 0.8, xa: 0.6, minutes_played: 180,
-    shots: 4, shots_on_target: 2, pass_accuracy: 84,
-    dna_score: 82,
-    attributes: mkAttrs({ pace: 74, dribbling: 76, passing: 81, shooting: 75, defending: 78, physicality: 86 }),
-    strengths: ['Box-to-box physical presence', 'Captain leadership of squad', 'Penalty box arrivals from midfield'],
-    weaknesses: ['Occasional concentration lapses defensively'],
-    role_suitability: mkRole({ cm: 85, cam: 45, striker: 30, winger: 10 }),
-    predicted_impact: 79,
-    comparison_players: ['Franck Kessié-tier all-action mid', 'Youssouf Fofana'],
+    club: 'Nottingham Forest', age: 28, height_cm: 191, caps: 42, is_captain: true,
+    goals: 1, assists: 2, xg: 0.9, xa: 1.1, minutes_played: 180,
+    shots: 4, shots_on_target: 2, pass_accuracy: 85,
+    dna_score: 83,
+    attributes: mkAttrs({ pace: 72, dribbling: 75, passing: 82, shooting: 70, defending: 84, physicality: 88 }),
+    strengths: ['Physical duel dominance in midfield', 'Interceptions and aerial presence', 'Ball retention under pressure'],
+    weaknesses: ['Pace against rapid counter-attacks'],
+    role_suitability: mkRole({ cm: 90, cam: 40, striker: 20, winger: 10 }),
+    predicted_impact: 81,
+    comparison_players: ['Casemiro', 'Youssouf Fofana'],
     shot_map: mkShots(4, 48),
-    form_trend: mkForm(78),
+    form_trend: mkForm(80),
   },
   {
     id: 'civ-diomande-yan', name: 'Yan Diomande', shirt_name: 'Y. DIOMANDE',
@@ -263,22 +263,6 @@ export const SWEDEN_PLAYERS: Player[] = [
 // Squad carries a symbolic "+1" place honoring Diogo Jota.
 // ════════════════════════════════════════════════════════════
 export const PORTUGAL_PLAYERS: Player[] = [
-  {
-    id: 'por-ronaldo', name: 'Cristiano Ronaldo', shirt_name: 'RONALDO',
-    team: 'Portugal', team_code: 'POR', position: 'FW', number: 7,
-    club: 'Al-Nassr', age: 41, height_cm: 187, caps: 226, is_captain: true,
-    goals: 2, assists: 1, xg: 1.8, xa: 0.7, minutes_played: 230,
-    shots: 10, shots_on_target: 5, pass_accuracy: 76,
-    dna_score: 85,
-    attributes: mkAttrs({ pace: 62, dribbling: 70, passing: 72, shooting: 89, defending: 25, physicality: 75 }),
-    strengths: ['All-time record international goalscorer (143)', 'Elite penalty box instincts', 'Unmatched tournament big-game mentality'],
-    weaknesses: ['Significantly reduced pace at 41', 'Limited defensive/pressing contribution'],
-    role_suitability: mkRole({ striker: 85, cam: 30, winger: 20, cm: 5 }),
-    predicted_impact: 80,
-    comparison_players: ['Robert Lewandowski (veteran tier)', 'Harry Kane'],
-    shot_map: mkShots(9, 51),
-    form_trend: mkForm(76),
-  },
   {
     id: 'por-fernandes', name: 'Bruno Fernandes', shirt_name: 'B. FERNANDES',
     team: 'Portugal', team_code: 'POR', position: 'MF', number: 8,

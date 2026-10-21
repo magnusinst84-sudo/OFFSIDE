@@ -44,10 +44,20 @@ function DnaPill({ score }: { score: number }) {
   )
 }
 
+const isEuropeanLeaguePlayer = (p: any): boolean => {
+  const club = (p.club || '').toLowerCase()
+  const NON_EUROPEAN = ['inter miami', 'miami', 'mls', 'al-nassr', 'al-hilal', 'al hilal', 'al-ahli', 'al-ittihad', 'galaxy', 'sounders']
+  if (NON_EUROPEAN.some(k => club.includes(k))) return false
+  if (p.name === 'Lionel Messi') return false
+  return true
+}
+
 export default function PlayersPage() {
   const router = useRouter()
-  const [players, setPlayers] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const [players, setPlayers] = useState<any[]>(() =>
+    [...ALL_PLAYERS].filter(isEuropeanLeaguePlayer).sort((a, b) => b.dna_score - a.dna_score)
+  )
+  const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [activePos, setActivePos] = useState('ALL')
   const [sortBy, setSortBy] = useState<'dna' | 'name' | 'goals'>('dna')
@@ -58,17 +68,17 @@ export default function PlayersPage() {
     getPlayers()
       .then(res => {
         if (mounted && res?.players && res.players.length > 0) {
-          setPlayers(res.players)
-        } else {
-          setPlayers([...ALL_PLAYERS].sort((a, b) => b.dna_score - a.dna_score))
+          const liveFiltered = res.players.filter(isEuropeanLeaguePlayer)
+          // Merge live stats with ALL_PLAYERS roster
+          const merged = ALL_PLAYERS.filter(isEuropeanLeaguePlayer).map(p => {
+            const liveMatch = liveFiltered.find((lp: any) => lp.name === p.name || lp.id === p.id)
+            return liveMatch ? { ...p, ...liveMatch } : p
+          })
+          setPlayers([...merged].sort((a, b) => b.dna_score - a.dna_score))
         }
-        setLoading(false)
       })
       .catch(() => {
-        if (mounted) {
-          setPlayers([...ALL_PLAYERS].sort((a, b) => b.dna_score - a.dna_score))
-          setLoading(false)
-        }
+        // Fallback already preloaded
       })
     return () => {
       mounted = false
