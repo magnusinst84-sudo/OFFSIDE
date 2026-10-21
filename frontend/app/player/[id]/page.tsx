@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { getPlayerById as getLegacyPlayer, searchPlayersLocal as searchLegacyPlayers } from '@/lib/data/legacy/players'
+import PLAYER_MATCH_MAP from '@/lib/data/legacy/player-match-map.json'
 import { ALL_LEAGUE_PLAYERS } from '@/lib/data/league'
 import type { LeaguePlayer } from '@/lib/data/league/league-types'
 import type { LegacyPlayer } from '@/lib/data/types'
@@ -59,6 +60,11 @@ export default function PlayerDetailPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeShot, setActiveShot] = useState<any>(null)
   const [photoError, setPhotoError] = useState(false)
+
+  const legacyMatch = useMemo(() => {
+    if (!id || !id.startsWith('api-')) return null
+    return (PLAYER_MATCH_MAP as any[]).find(m => m.league_id === id) ?? null
+  }, [id])
 
   useEffect(() => {
     setLoading(true)
@@ -294,11 +300,20 @@ export default function PlayerDetailPage() {
         <div className="flex items-center sm:flex-col sm:items-end justify-between sm:justify-center p-3 sm:p-0 rounded-xl bg-white/[0.02] sm:bg-transparent">
           {isLeague ? (
             <div className="flex flex-col items-start sm:items-end">
-              <span className="text-[24px] sm:text-[32px] font-bold text-[#64748B] font-mono leading-none">
-                No data
-              </span>
+              {legacyMatch ? (
+                <Link
+                  href={`/player/${legacyMatch.legacy_id}`}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--color-accent-soft,rgba(0,255,135,0.12))] text-[var(--color-accent,#00FF87)] border border-[rgba(0,255,135,0.35)] hover:bg-[var(--color-accent,#00FF87)] hover:text-black text-[12px] font-mono font-medium transition-all shadow-[0_0_8px_rgba(0,255,135,0.25)]"
+                >
+                  ★ View DNA Profile
+                </Link>
+              ) : (
+                <span className="text-[24px] sm:text-[32px] font-bold text-[#64748B] font-mono leading-none">
+                  No data
+                </span>
+              )}
               <span className="text-[11px] text-[#94A3B8] uppercase tracking-wider mt-1">
-                DNA Score
+                {legacyMatch ? 'Mapped to DNA Roster' : 'DNA Score'}
               </span>
             </div>
           ) : (
@@ -334,9 +349,17 @@ export default function PlayerDetailPage() {
               <div className="py-12 flex flex-col items-center justify-center text-center p-6 rounded-xl bg-[#1A1D27]/30 border border-white/[0.04]">
                 <AlertCircle size={28} className="text-[#64748B] mb-2" />
                 <p className="text-[14px] text-white font-medium mb-1">No tactical attribute data</p>
-                <p className="text-[13px] text-[#94A3B8] max-w-sm">
-                  Analytical radar metrics are calculated for the curated World Cup DNA roster entries only.
+                <p className="text-[13px] text-[#94A3B8] max-w-sm mb-3">
+                  Analytical radar metrics are calculated for the curated World Cup DNA roster entries.
                 </p>
+                {legacyMatch && (
+                  <Link
+                    href={`/player/${legacyMatch.legacy_id}`}
+                    className="px-4 py-2 rounded-lg bg-[var(--color-accent,#00FF87)] text-black font-semibold text-[13px] hover:opacity-90 transition-opacity"
+                  >
+                    View World Cup DNA Profile
+                  </Link>
+                )}
               </div>
             ) : (
               <>

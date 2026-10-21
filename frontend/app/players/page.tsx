@@ -4,10 +4,15 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { getPlayers } from '@/lib/api'
 import { ALL_PLAYERS } from '@/lib/data/legacy/players'
-import { ALL_LEAGUE_PLAYERS, filterByPill } from '@/lib/data/league'
+import PLAYER_MATCH_MAP from '@/lib/data/legacy/player-match-map.json'
+import { ALL_LEAGUE_PLAYERS, CLUBS, filterByPill } from '@/lib/data/league'
 import type { LeagueFilter, LeaguePlayer } from '@/lib/data/league/league-types'
 import { SegmentedTabs, Chip, Input, Button, Avatar, EmptyState } from '@/components/shared/Primitives'
 import { Search, ChevronRight, User, ShieldAlert } from 'lucide-react'
+
+const clubById = new Map(CLUBS.map(c => [c.id, c]))
+const matchMapByLegacyId = new Map(PLAYER_MATCH_MAP.map(m => [m.legacy_id, m]))
+const matchMapByLeagueId = new Map(PLAYER_MATCH_MAP.map(m => [m.league_id, m]))
 
 const POSITION_TABS = [
   { id: 'ALL', label: 'All' },
@@ -106,6 +111,7 @@ export default function PlayersPage() {
     [...ALL_PLAYERS].filter(isEuropeanLeaguePlayer).sort((a, b) => b.dna_score - a.dna_score)
   )
   const [dnaSearch, setDnaSearch] = useState('')
+  const [dnaPill, setDnaPill] = useState<LeagueFilter>('All')
   const [dnaPos, setDnaPos] = useState('ALL')
   const [dnaSort, setDnaSort] = useState<'dna' | 'name' | 'goals'>('dna')
   const [dnaVisibleCount, setDnaVisibleCount] = useState(25)
@@ -138,8 +144,20 @@ export default function PlayersPage() {
 
   // Position count calculations for DNA Roster
   const dnaCounts = useMemo(() => {
-    const res: Record<string, number> = { ALL: dnaPlayers.length, FW: 0, MF: 0, DF: 0, GK: 0 }
+    const res: Record<string, number> = { ALL: 0, FW: 0, MF: 0, DF: 0, GK: 0 }
     dnaPlayers.forEach(p => {
+      if (dnaPill !== 'All') {
+        const match = matchMapByLegacyId.get(p.id)
+        if (!match) return
+        const club = clubById.get(match.club_id)
+        if (!club) return
+        if (dnaPill === 'UCL' || dnaPill === 'UEL' || dnaPill === 'UECL') {
+          if (!club.competitions.includes(dnaPill)) return
+        } else {
+          if (club.league !== dnaPill) return
+        }
+      }
+      res.ALL++
       const pos = (p.position || '').toUpperCase()
       if (pos.includes('FW') || pos.includes('ST') || pos.includes('W')) res.FW++
       else if (pos.includes('MF') || pos.includes('M')) res.MF++
@@ -147,12 +165,25 @@ export default function PlayersPage() {
       else if (pos.includes('GK') || pos.includes('G')) res.GK++
     })
     return res
-  }, [dnaPlayers])
+  }, [dnaPlayers, dnaPill])
 
   // Filtered DNA Players
   const filteredDnaPlayers = useMemo(() => {
     return dnaPlayers
       .filter(p => {
+        // Filter by competition / league pill via match map
+        if (dnaPill !== 'All') {
+          const match = matchMapByLegacyId.get(p.id)
+          if (!match) return false
+          const club = clubById.get(match.club_id)
+          if (!club) return false
+          if (dnaPill === 'UCL' || dnaPill === 'UEL' || dnaPill === 'UECL') {
+            if (!club.competitions.includes(dnaPill)) return false
+          } else {
+            if (club.league !== dnaPill) return false
+          }
+        }
+
         const matchesSearch =
           p.name.toLowerCase().includes(dnaSearch.toLowerCase()) ||
           (p.team || '').toLowerCase().includes(dnaSearch.toLowerCase()) ||
@@ -173,7 +204,7 @@ export default function PlayersPage() {
         if (dnaSort === 'goals') return (b.goals ?? b.stats?.goals ?? 0) - (a.goals ?? a.stats?.goals ?? 0)
         return a.name.localeCompare(b.name)
       })
-  }, [dnaPlayers, dnaSearch, dnaPos, dnaSort])
+  }, [dnaPlayers, dnaSearch, dnaPos, dnaSort, dnaPill])
 
   // Filtered League Players (Tab 2)
   const filteredLeaguePlayers = useMemo(() => {
@@ -272,58 +303,82 @@ export default function PlayersPage() {
       {activeDataset === 'dna' && (
         <>
           {/* Sticky Controls */}
-          <div className="sticky top-[56px] z-30 bg-[#050508]/95 backdrop-blur-md pt-2 pb-4 border-b border-white/[0.08] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-            <div className="w-full md:max-w-xs">
-              <Input
-                placeholder="Search by player, club, or country..."
-                value={dnaSearch}
-                onChange={e => {
-                  setDnaSearch(e.target.value)
-                  setDnaVisibleCount(25)
-                }}
-                icon={<Search size={16} />}
-              />
-            </div>
-
-            <div className="flex items-center justify-between md:justify-end gap-3 overflow-x-auto">
-              <div className="hidden sm:block">
-                <SegmentedTabs
-                  tabs={POSITION_TABS.map(t => ({
-                    id: t.id,
-                    label: t.label,
-                    count: dnaCounts[t.id],
-                  }))}
-                  activeTab={dnaPos}
-                  onChange={pos => {
-                    setDnaPos(pos)
+          <div className="sticky top-[56px] z-30 bg-[#050508]/95 backdrop-blur-md pt-2 pb-4 border-b border-white/[0.08] flex flex-col gap-3">
+            {/* Row 1: Search, Position Tabs & Sort */}
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+              <div className="w-full md:max-w-xs">
+                <Input
+                  placeholder="Search by player, club, or country..."
+                  value={dnaSearch}
+                  onChange={e => {
+                    setDnaSearch(e.target.value)
                     setDnaVisibleCount(25)
                   }}
+                  icon={<Search size={16} />}
                 />
               </div>
 
-              <div className="sm:hidden flex items-center gap-1.5 overflow-x-auto">
-                {POSITION_TABS.map(t => (
-                  <Chip
-                    key={t.id}
-                    label={`${t.label} (${dnaCounts[t.id] ?? 0})`}
-                    selected={dnaPos === t.id}
-                    onClick={() => {
-                      setDnaPos(t.id)
+              <div className="flex items-center justify-between md:justify-end gap-3 overflow-x-auto">
+                <div className="hidden sm:block">
+                  <SegmentedTabs
+                    tabs={POSITION_TABS.map(t => ({
+                      id: t.id,
+                      label: t.label,
+                      count: dnaCounts[t.id],
+                    }))}
+                    activeTab={dnaPos}
+                    onChange={pos => {
+                      setDnaPos(pos)
                       setDnaVisibleCount(25)
                     }}
                   />
-                ))}
-              </div>
+                </div>
 
-              <select
-                value={dnaSort}
-                onChange={e => setDnaSort(e.target.value as any)}
-                className="h-[44px] px-3 rounded-[10px] bg-[#0F1117] border border-white/10 text-[13px] text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] cursor-pointer"
-              >
-                <option value="dna">Sort: DNA Score</option>
-                <option value="goals">Sort: Goals</option>
-                <option value="name">Sort: Name</option>
-              </select>
+                <div className="sm:hidden flex items-center gap-1.5 overflow-x-auto">
+                  {POSITION_TABS.map(t => (
+                    <Chip
+                      key={t.id}
+                      label={`${t.label} (${dnaCounts[t.id] ?? 0})`}
+                      selected={dnaPos === t.id}
+                      onClick={() => {
+                        setDnaPos(t.id)
+                        setDnaVisibleCount(25)
+                      }}
+                    />
+                  ))}
+                </div>
+
+                <select
+                  value={dnaSort}
+                  onChange={e => setDnaSort(e.target.value as any)}
+                  className="h-[44px] px-3 rounded-[10px] bg-[#0F1117] border border-white/10 text-[13px] text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] cursor-pointer"
+                >
+                  <option value="dna">Sort: DNA Score</option>
+                  <option value="goals">Sort: Goals</option>
+                  <option value="name">Sort: Name</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Row 2: League / Competition Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none">
+              {LEAGUE_PILLS.map(p => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => {
+                    setDnaPill(p.id)
+                    setDnaVisibleCount(25)
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-[12px] font-mono font-medium whitespace-nowrap transition-colors cursor-pointer ${
+                    dnaPill === p.id
+                      ? 'bg-[var(--color-accent,#00FF87)] text-black font-semibold'
+                      : 'bg-[#0F1117] text-[#94A3B8] border border-white/10 hover:border-white/20 hover:text-white'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -333,13 +388,14 @@ export default function PlayersPage() {
               <EmptyState
                 icon={<User size={32} />}
                 title="No players found"
-                description="No players matched your search or position filter in the DNA Roster."
+                description="No players matched your search, competition, or position filter in the DNA Roster."
                 action={
                   <button
                     type="button"
                     onClick={() => {
                       setDnaSearch('')
                       setDnaPos('ALL')
+                      setDnaPill('All')
                     }}
                     className="text-[13px] text-[var(--color-accent,#00FF87)] hover:underline cursor-pointer"
                   >
@@ -539,66 +595,83 @@ export default function PlayersPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/[0.04]">
-                      {filteredLeaguePlayers.slice(0, clubVisibleCount).map((player, idx) => (
-                        <tr
-                          key={player.id}
-                          onClick={() => router.push(`/player/${player.id}`)}
-                          className="group h-[56px] hover:bg-[#1A1D27]/80 transition-colors cursor-pointer"
-                        >
-                          <td className="py-2 px-3 text-center font-mono text-[13px] text-[#64748B]">
-                            {idx + 1}
-                          </td>
-                          <td className="py-2 px-3">
-                            <div className="flex items-center gap-3">
-                              <LeaguePlayerPhoto player={player} />
-                              <div className="flex flex-col min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[14px] sm:text-[15px] font-medium text-white truncate group-hover:text-[var(--color-accent,#00FF87)] transition-colors">
-                                    {player.name}
-                                  </span>
-                                  {player.number_conflict && (
-                                    <span
-                                      className="px-1.5 py-0.2 rounded bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[10px] font-mono shrink-0"
-                                      title="Shared shirt number in club squad (reserve or youth player)"
-                                    >
-                                      # conflict
+                      {filteredLeaguePlayers.slice(0, clubVisibleCount).map((player, idx) => {
+                        const legacyMatch = matchMapByLeagueId.get(player.id)
+                        return (
+                          <tr
+                            key={player.id}
+                            onClick={() => router.push(`/player/${player.id}`)}
+                            className="group h-[56px] hover:bg-[#1A1D27]/80 transition-colors cursor-pointer"
+                          >
+                            <td className="py-2 px-3 text-center font-mono text-[13px] text-[#64748B]">
+                              {idx + 1}
+                            </td>
+                            <td className="py-2 px-3">
+                              <div className="flex items-center gap-3">
+                                <LeaguePlayerPhoto player={player} />
+                                <div className="flex flex-col min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[14px] sm:text-[15px] font-medium text-white truncate group-hover:text-[var(--color-accent,#00FF87)] transition-colors">
+                                      {player.name}
                                     </span>
-                                  )}
+                                    {player.number_conflict && (
+                                      <span
+                                        className="px-1.5 py-0.2 rounded bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[10px] font-mono shrink-0"
+                                        title="Shared shirt number in club squad (reserve or youth player)"
+                                      >
+                                        # conflict
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="sm:hidden text-[12px] text-[#94A3B8] truncate">
+                                    {player.club}
+                                  </span>
                                 </div>
-                                <span className="sm:hidden text-[12px] text-[#94A3B8] truncate">
-                                  {player.club}
-                                </span>
                               </div>
-                            </div>
-                          </td>
-                          <td className="py-2 px-3 text-center font-mono text-[13px] text-[#94A3B8]">
-                            {player.position}
-                          </td>
-                          <td className="py-2 px-3 text-[14px] text-[#94A3B8] truncate">
-                            <div className="flex items-center gap-2">
-                              <span>{player.club}</span>
-                              <span className="text-[11px] text-[#64748B] font-mono">({player.country})</span>
-                            </div>
-                          </td>
-                          <td className="py-2 px-3 hidden md:table-cell text-[13px] text-[#94A3B8] font-mono">
-                            {player.league}
-                          </td>
-                          <td className="py-2 px-3 text-center font-mono text-[13px] text-white">
-                            {player.number !== null ? `#${player.number}` : '—'}
-                          </td>
-                          <td className="py-2 px-3 text-center font-mono text-[13px] text-[#94A3B8] hidden sm:table-cell">
-                            {player.age !== null ? `${player.age}` : '—'}
-                          </td>
-                          <td className="py-2 px-3 text-center">
-                            <span className="font-mono text-[11px] text-[#64748B]">
-                              No data
-                            </span>
-                          </td>
-                          <td className="py-2 px-3 text-right text-[#64748B] group-hover:text-white transition-colors">
-                            <ChevronRight size={18} />
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                            <td className="py-2 px-3 text-center font-mono text-[13px] text-[#94A3B8]">
+                              {player.position}
+                            </td>
+                            <td className="py-2 px-3 text-[14px] text-[#94A3B8] truncate">
+                              <div className="flex items-center gap-2">
+                                <span>{player.club}</span>
+                                <span className="text-[11px] text-[#64748B] font-mono">({player.country})</span>
+                              </div>
+                            </td>
+                            <td className="py-2 px-3 hidden md:table-cell text-[13px] text-[#94A3B8] font-mono">
+                              {player.league}
+                            </td>
+                            <td className="py-2 px-3 text-center font-mono text-[13px] text-white">
+                              {player.number !== null ? `#${player.number}` : '—'}
+                            </td>
+                            <td className="py-2 px-3 text-center font-mono text-[13px] text-[#94A3B8] hidden sm:table-cell">
+                              {player.age !== null ? `${player.age}` : '—'}
+                            </td>
+                            <td className="py-2 px-3 text-center">
+                              {legacyMatch ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    router.push(`/player/${legacyMatch.legacy_id}`)
+                                  }}
+                                  className="inline-flex items-center justify-center px-2 py-0.5 rounded-full font-mono text-[11px] font-semibold uppercase tracking-wider transition-all cursor-pointer bg-[var(--color-accent-soft,rgba(0,255,135,0.12))] text-[var(--color-accent,#00FF87)] border border-[rgba(0,255,135,0.35)] hover:bg-[var(--color-accent,#00FF87)] hover:text-black shadow-[0_0_8px_rgba(0,255,135,0.25)]"
+                                  title={`View legacy DNA profile (${legacyMatch.legacy_id})`}
+                                >
+                                  DNA
+                                </button>
+                              ) : (
+                                <span className="font-mono text-[11px] text-[#64748B]">
+                                  No data
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-2 px-3 text-right text-[#64748B] group-hover:text-white transition-colors">
+                              <ChevronRight size={18} />
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>
