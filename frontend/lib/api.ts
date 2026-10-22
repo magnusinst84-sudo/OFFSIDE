@@ -72,18 +72,6 @@ export const askAnalyst = (payload: {
   conversation_history?: object[]
 }) => api.post('/api/commentary/ask', payload).then(r => r.data)
 
-// ─── Players ─────────────────────────────────────────
-export const getPlayers = () =>
-  api.get('/api/players').then(r => r.data)
-
-export const getPlayerById = (id: string | number) =>
-  api.get(`/api/players/${id}`).then(r => r.data)
-
-export const getPlayerDNA = (id: string | number) =>
-  api.post(`/api/players/${id}/dna`).then(r => r.data)
-
-export const searchPlayers = (q: string) =>
-  api.get(`/api/players/search?q=${encodeURIComponent(q)}`).then(r => r.data)
 
 // ─── Insights ────────────────────────────────────────
 export const getInsights = () =>
@@ -101,5 +89,8 @@ export const getPredictionLog = () =>
 // ─── Health ──────────────────────────────────────────
 export const checkHealth = () =>
   api.get('/health').then(r => r.data)
+
+export const getQuotaHealth = () =>
+  api.get('/api/health/quota').then(r => r.data)
 
 export default api

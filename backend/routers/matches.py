@@ -1,7 +1,9 @@
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
 import os, httpx, asyncio
 from datetime import datetime, timedelta
-from cache_db import get_cache, set_cache
+from cache_db import get_cache, set_cache, get_stale_cache
+from api_football import api_football_request, get_configured_ttl
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -9,6 +11,16 @@ load_dotenv()
 router = APIRouter()
 
 API_FOOTBALL_BASE = "https://v3.football.api-sports.io"
+
+# Configurable TTLs (in seconds)
+TTL_MATCHES_LIVE = get_configured_ttl("MATCHES_LIVE", 45)
+TTL_MATCHES_UPCOMING = get_configured_ttl("MATCHES_UPCOMING", 600)
+TTL_MATCHES_FINISHED = get_configured_ttl("MATCHES_FINISHED", 600)
+TTL_MATCH_DETAIL_LIVE = get_configured_ttl("MATCH_DETAIL_LIVE", 45)
+TTL_MATCH_DETAIL_FINISHED = get_configured_ttl("MATCH_DETAIL_FINISHED", 3600)
+TTL_MATCH_STATS = get_configured_ttl("MATCH_STATS", 30)
+TTL_MATCH_EVENTS = get_configured_ttl("MATCH_EVENTS", 30)
+TTL_MATCH_LINEUPS = get_configured_ttl("MATCH_LINEUPS", 900)
 
 def get_headers():
     key = os.getenv("API_FOOTBALL_KEY", "")
@@ -281,235 +293,215 @@ def fmt_match(f: dict) -> dict:
         "date": fixture.get("date", ""),
     }
 
-# ---------------------------------------------------------------------------
 # Top European Tournaments & Domestic Cups
-# ---------------------------------------------------------------------------
-# UCL (2), UEL (3), UECL (848)
-# Premier League (39), FA Cup (45), EFL Cup (48)
-# La Liga (140), Copa del Rey (143)
-# Bundesliga (78), DFB Pokal (81)
-# Serie A (135), Coppa Italia (137)
-# Ligue 1 (61), Coupe de France (66)
-TOP_LEAGUE_IDS = {2, 3, 848, 39, 45, 48, 140, 143, 78, 81, 135, 137, 61, 66}
+TOP_LEAGUE_IDS = {
+    2, 3, 848, 531,
+    39, 45, 48,
+    140, 143, 556,
+    78, 81, 529,
+    135, 137, 547,
+    61, 66, 526,
+    203, 205,
+    144, 147,
+    88, 90,
+    94, 96,
+    179,
+}
+
+MOCK_MATCHES = MOCK_LIVE_MATCHES + MOCK_UPCOMING_MATCHES + MOCK_FINISHED_MATCHES
+MOCK_MATCH_MAP = {m["id"]: m for m in MOCK_MATCHES}
 
 def is_top_flight(f: dict) -> bool:
     league = f.get("league", {})
-    lid = league.get("id")
-    if lid in TOP_LEAGUE_IDS:
-        return True
-    
-    country = (league.get("country") or "").lower()
-    lname = (league.get("name") or "").lower()
-
-    # STRICT EXCLUSIONS: Youth, U21/U23/U19, Reserves, CAF/Africa, Women, Friendly
-    EXCLUDE_KEYWORDS = [
-        "u21", "u23", "u19", "u20", "u18", "u17", "youth", "reserve", "reserves",
-        "caf", "africa", "afcon", "women", "feminin", "friendly", "amateur"
-    ]
-    if any(k in lname for k in EXCLUDE_KEYWORDS):
-        return False
-
-    # English Premier League and top domestic cups only (exclude Premier League 2 / Development)
-    if country in ("england", "united kingdom"):
-        if "premier league 2" in lname or "development" in lname:
-            return False
-        if any(k in lname for k in ["premier league", "fa cup", "efl cup", "carabao cup"]):
-            return True
-
-    # UEFA Elite competitions only (Champions League, Europa League, Conference League)
-    if country in ("world", "europe") or "uefa" in lname:
-        if any(k in lname for k in ["uefa champions league", "champions league", "uefa europa league", "europa league", "conference league"]):
-            # Double check it is not CAF, AFC, or youth
-            if not any(k in lname for k in ["caf", "afc", "concacaf", "ofc", "youth"]):
-                return True
-
-    # Spain (La Liga & Copa del Rey only - exclude 2a division/RFEF)
-    if country == "spain":
-        if any(k in lname for k in ["la liga", "primera división", "copa del rey"]) and "2" not in lname and "hyper" not in lname:
-            return True
-
-    # Germany (Bundesliga & DFB-Pokal - exclude 2. Bundesliga)
-    if country == "germany":
-        if ("bundesliga" in lname and "2" not in lname) or "dfb-pokal" in lname or "dfb pokal" in lname:
-            return True
-
-    # Italy (Serie A & Coppa Italia only)
-    if country == "italy":
-        if ("serie a" in lname and "femminile" not in lname) or "coppa italia" in lname:
-            return True
-
-    # France (Ligue 1 & Coupe de France only)
-    if country == "france":
-        if ("ligue 1" in lname and "2" not in lname) or "coupe de france" in lname:
-            return True
-
-    return False
+    return league.get("id") in TOP_LEAGUE_IDS
 
 # ---------------------------------------------------------------------------
 # Live API fetch
 # ---------------------------------------------------------------------------
 
 async def fetch_fixtures(status: str):
-    headers = get_headers()
-    if not headers.get("x-apisports-key"):
-        return []
-    
     cache_key = f"fixtures_{status}_top_tier_v5"
-    # TTL: 45 seconds for live matches, 10 minutes for upcoming/finished
-    ttl = 45 if status == "1H-2H-ET-P-LIVE" else 600
+    ttl = TTL_MATCHES_LIVE if status == "1H-2H-ET-P-LIVE" else TTL_MATCHES_UPCOMING if status == "NS" else TTL_MATCHES_FINISHED
+    # 1. Fresh cache
     cached = get_cache(cache_key)
     if cached is not None:
-        return cached
+        return cached, "cache"
 
     today_str = datetime.utcnow().strftime("%Y-%m-%d")
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        try:
-            if status == "1H-2H-ET-P-LIVE":
-                r = await client.get(f"{API_FOOTBALL_BASE}/fixtures", headers=headers, params={"live": "all"})
-                if r.status_code != 200:
-                    return []
-                all_live = r.json().get("response", [])
-                # Strictly filter to top European competitions (UCL, UEL, UECL, Big 5 & cups)
-                fixtures = [f for f in all_live if is_top_flight(f)]
-            elif status == "NS":
-                # Fetch upcoming matches for today and tomorrow (next 1-2 days)
-                day1_str = today_str
-                day2_str = (datetime.utcnow() + timedelta(days=1)).strftime("%Y-%m-%d")
-                day3_str = (datetime.utcnow() + timedelta(days=2)).strftime("%Y-%m-%d")
-                
-                now = datetime.utcnow()
-                cutoff_48h = now + timedelta(hours=48)
+    try:
+        # 2. Upstream via wrapper
+        if status == "1H-2H-ET-P-LIVE":
+            r = await api_football_request("/fixtures", params={"live": "all"}, cache_key=cache_key)
+            if not r:
+                stale = get_stale_cache(cache_key)
+                if stale is not None:
+                    return stale, "stale"
+                return [{**m, "data_source": "mock"} for m in MOCK_LIVE_MATCHES], "mock"
+            all_live = r.get("response", [])
+            fixtures = [f for f in all_live if is_top_flight(f)]
+        elif status == "NS":
+            day1_str = today_str
+            day2_str = (datetime.utcnow() + timedelta(days=1)).strftime("%Y-%m-%d")
+            day3_str = (datetime.utcnow() + timedelta(days=2)).strftime("%Y-%m-%d")
+            
+            now = datetime.utcnow()
+            cutoff_48h = now + timedelta(hours=48)
 
-                collected = []
-                # Check date range today -> +2 days
-                for d_str in [day1_str, day2_str, day3_str]:
-                    r = await client.get(f"{API_FOOTBALL_BASE}/fixtures", headers=headers, params={"date": d_str, "status": "NS"})
-                    if r.status_code == 200:
-                        day_res = r.json().get("response", [])
-                        top_fixtures = [f for f in day_res if is_top_flight(f)]
-                        collected.extend(top_fixtures)
+            collected = []
+            for d_str in [day1_str, day2_str, day3_str]:
+                r = await api_football_request("/fixtures", params={"date": d_str, "status": "NS"}, cache_key=cache_key)
+                if r:
+                    day_res = r.get("response", [])
+                    top_fixtures = [f for f in day_res if is_top_flight(f)]
+                    collected.extend(top_fixtures)
 
-                # Fallback to 'next' endpoint if the daily calendar returned no top flight games
-                if not collected:
-                    r_next = await client.get(f"{API_FOOTBALL_BASE}/fixtures", headers=headers, params={"next": 50})
-                    next_resp = r_next.json().get("response", []) if r_next.status_code == 200 else []
-                    collected = [f for f in next_resp if is_top_flight(f)]
+            if not collected:
+                r_next = await api_football_request("/fixtures", params={"next": 50}, cache_key=cache_key)
+                next_resp = r_next.get("response", []) if r_next else []
+                collected = [f for f in next_resp if is_top_flight(f)]
 
-                # Strictly keep only matches within the next 48 hours (1-2 days)
-                valid_fixtures = []
-                for f in collected:
-                    match_date_str = f.get("fixture", {}).get("date")
-                    if match_date_str:
-                        try:
-                            # Normalize ISO timestamp
-                            clean_str = match_date_str.replace("Z", "+00:00")
-                            m_dt = datetime.fromisoformat(clean_str).replace(tzinfo=None)
-                            if now - timedelta(hours=2) <= m_dt <= cutoff_48h:
-                                valid_fixtures.append(f)
-                        except Exception:
+            valid_fixtures = []
+            for f in collected:
+                match_date_str = f.get("fixture", {}).get("date")
+                if match_date_str:
+                    try:
+                        clean_str = match_date_str.replace("Z", "+00:00")
+                        m_dt = datetime.fromisoformat(clean_str).replace(tzinfo=None)
+                        if now - timedelta(hours=2) <= m_dt <= cutoff_48h:
                             valid_fixtures.append(f)
-                    else:
+                    except Exception:
                         valid_fixtures.append(f)
+                else:
+                    valid_fixtures.append(f)
 
-                # Sort chronologically by date
-                valid_fixtures.sort(key=lambda x: x.get("fixture", {}).get("date", ""))
-                fixtures = valid_fixtures
-            else:
-                # Finished matches: past 1 week (7 days)
-                one_week_ago = datetime.utcnow() - timedelta(days=7)
-                now = datetime.utcnow()
+            valid_fixtures.sort(key=lambda x: x.get("fixture", {}).get("date", ""))
+            fixtures = valid_fixtures
+        else:
+            one_week_ago = datetime.utcnow() - timedelta(days=7)
+            now = datetime.utcnow()
 
-                # Query recently finished matches
-                r_last = await client.get(f"{API_FOOTBALL_BASE}/fixtures", headers=headers, params={"last": 70})
-                last_resp = r_last.json().get("response", []) if r_last.status_code == 200 else []
-                top_last = [f for f in last_resp if is_top_flight(f)]
+            r_last = await api_football_request("/fixtures", params={"last": 70}, cache_key=cache_key)
+            last_resp = r_last.get("response", []) if r_last else []
+            top_last = [f for f in last_resp if is_top_flight(f)]
 
-                # Filter strictly to matches played within the last 7 days
-                valid_finished = []
-                for f in top_last:
-                    match_date_str = f.get("fixture", {}).get("date")
-                    if match_date_str:
-                        try:
-                            clean_str = match_date_str.replace("Z", "+00:00")
-                            m_dt = datetime.fromisoformat(clean_str).replace(tzinfo=None)
-                            if one_week_ago <= m_dt <= now + timedelta(hours=2):
-                                valid_finished.append(f)
-                        except Exception:
+            valid_finished = []
+            for f in top_last:
+                match_date_str = f.get("fixture", {}).get("date")
+                if match_date_str:
+                    try:
+                        clean_str = match_date_str.replace("Z", "+00:00")
+                        m_dt = datetime.fromisoformat(clean_str).replace(tzinfo=None)
+                        if one_week_ago <= m_dt <= now + timedelta(hours=2):
                             valid_finished.append(f)
-                    else:
+                    except Exception:
                         valid_finished.append(f)
+                else:
+                    valid_finished.append(f)
 
-                # Sort by date descending (most recently finished matches first)
-                valid_finished.sort(key=lambda x: x.get("fixture", {}).get("date", ""), reverse=True)
-                fixtures = valid_finished
+            valid_finished.sort(key=lambda x: x.get("fixture", {}).get("date", ""), reverse=True)
+            fixtures = valid_finished
 
-            formatted = [fmt_match(f) for f in fixtures][:25]
-            if formatted is not None:
-                set_cache(cache_key, formatted, ttl_seconds=ttl)
-            return formatted
-        except Exception as e:
-            print(f"[matches] Error fetching fixtures: {e}")
-            return []
+        formatted = [{**fmt_match(f), "data_source": "live"} for f in fixtures][:25]
+        if formatted is not None and len(formatted) > 0:
+            set_cache(cache_key, formatted, ttl_seconds=ttl)
+            return formatted, "live"
+    except Exception as e:
+        print(f"[matches] Error fetching fixtures: {e}")
+
+    # 3. Stale cache
+    stale = get_stale_cache(cache_key)
+    if stale is not None:
+        return [{**m, "data_source": "stale"} for m in stale], "stale"
+
+    # 4. Mock fallback
+    if status == "1H-2H-ET-P-LIVE":
+        return [{**m, "data_source": "mock"} for m in MOCK_LIVE_MATCHES], "mock"
+    elif status == "NS":
+        return [{**m, "data_source": "mock"} for m in MOCK_UPCOMING_MATCHES], "mock"
+    else:
+        return [{**m, "data_source": "mock"} for m in MOCK_FINISHED_MATCHES], "mock"
 
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
 
+@router.get("")
+@router.get("/")
+async def get_matches():
+    if is_mock_mode():
+        all_matches = [{**m, "data_source": "mock"} for m in MOCK_MATCHES]
+        return {"matches": all_matches, "count": len(all_matches), "data_source": "mock", "source": "mock"}
+    live, ds = await fetch_fixtures("1H-2H-ET-P-LIVE")
+    if live:
+        return {"matches": live, "count": len(live), "data_source": ds, "source": ds}
+    all_mock = [{**m, "data_source": "mock"} for m in MOCK_MATCHES]
+    return {"matches": all_mock, "count": len(all_mock), "data_source": "mock", "source": "mock"}
+
 @router.get("/live")
 async def get_live_matches():
     if is_mock_mode():
-        return {"matches": MOCK_LIVE_MATCHES, "count": len(MOCK_LIVE_MATCHES), "source": "mock"}
-    matches = await fetch_fixtures("1H-2H-ET-P-LIVE")
-    return {"matches": matches, "count": len(matches), "source": "live"}
+        mock_list = [{**m, "data_source": "mock"} for m in MOCK_LIVE_MATCHES]
+        return {"matches": mock_list, "count": len(mock_list), "data_source": "mock", "source": "mock"}
+    matches, ds = await fetch_fixtures("1H-2H-ET-P-LIVE")
+    if not matches:
+        mock_list = [{**m, "data_source": "mock"} for m in MOCK_LIVE_MATCHES]
+        return {"matches": mock_list, "count": len(mock_list), "data_source": "mock", "source": "mock"}
+    return {"matches": matches, "count": len(matches), "data_source": ds, "source": ds}
 
 @router.get("/upcoming")
 async def get_upcoming_matches():
     if is_mock_mode():
-        return {"matches": MOCK_UPCOMING_MATCHES, "count": len(MOCK_UPCOMING_MATCHES), "source": "mock"}
-    matches = await fetch_fixtures("NS")
-    return {"matches": matches, "count": len(matches), "source": "live"}
+        mock_list = [{**m, "data_source": "mock"} for m in MOCK_UPCOMING_MATCHES]
+        return {"matches": mock_list, "count": len(mock_list), "data_source": "mock", "source": "mock"}
+    matches, ds = await fetch_fixtures("NS")
+    if not matches:
+        mock_list = [{**m, "data_source": "mock"} for m in MOCK_UPCOMING_MATCHES]
+        return {"matches": mock_list, "count": len(mock_list), "data_source": "mock", "source": "mock"}
+    return {"matches": matches, "count": len(matches), "data_source": ds, "source": ds}
 
 @router.get("/finished")
 async def get_finished_matches():
     if is_mock_mode():
-        return {"matches": MOCK_FINISHED_MATCHES, "count": len(MOCK_FINISHED_MATCHES), "source": "mock"}
-    matches = await fetch_fixtures("FT-AET-PEN")
-    return {"matches": matches, "count": len(matches), "source": "live"}
+        mock_list = [{**m, "data_source": "mock"} for m in MOCK_FINISHED_MATCHES]
+        return {"matches": mock_list, "count": len(mock_list), "data_source": "mock", "source": "mock"}
+    matches, ds = await fetch_fixtures("FT-AET-PEN")
+    if not matches:
+        mock_list = [{**m, "data_source": "mock"} for m in MOCK_FINISHED_MATCHES]
+        return {"matches": mock_list, "count": len(mock_list), "data_source": "mock", "source": "mock"}
+    return {"matches": matches, "count": len(matches), "data_source": ds, "source": ds}
 
 @router.get("/{match_id}")
 async def get_match_detail(match_id: int):
     # Check fallback lists first if mock mode
     if is_mock_mode():
-        for m in MOCK_LIVE_MATCHES + MOCK_UPCOMING_MATCHES + MOCK_FINISHED_MATCHES:
-            if m["id"] == match_id:
-                return m
-        return MOCK_LIVE_MATCHES[0]
+        if match_id in MOCK_MATCH_MAP:
+            return {**MOCK_MATCH_MAP[match_id], "data_source": "mock"}
+        raise HTTPException(status_code=404, detail=f"Match {match_id} not found")
 
     cache_key = f"match_detail_{match_id}"
     cached = get_cache(cache_key)
     if cached is not None:
-        return cached
+        if isinstance(cached, dict) and cached.get("_not_found"):
+            raise HTTPException(status_code=404, detail=f"Match {match_id} not found")
+        return {**cached, "data_source": "cache"}
 
-    headers = get_headers()
-    if not headers.get("x-apisports-key"):
-        for m in MOCK_LIVE_MATCHES + MOCK_UPCOMING_MATCHES + MOCK_FINISHED_MATCHES:
-            if m["id"] == match_id:
-                return m
-        return MOCK_LIVE_MATCHES[0]
+    r = await api_football_request("/fixtures", params={"id": match_id}, cache_key=cache_key)
+    if r is not None:
+        resp = r.get("response", [])
+        if resp:
+            detail = fmt_match(resp[0])
+            ttl = TTL_MATCH_DETAIL_LIVE if detail["status"] == "live" else TTL_MATCH_DETAIL_FINISHED
+            set_cache(cache_key, detail, ttl_seconds=ttl)
+            return {**detail, "data_source": "live"}
+        else:
+            set_cache(cache_key, {"_not_found": True}, ttl_seconds=TTL_MATCH_DETAIL_FINISHED)
+            raise HTTPException(status_code=404, detail=f"Match {match_id} not found")
 
-    async with httpx.AsyncClient(timeout=8.0) as client:
-        try:
-            r = await client.get(f"{API_FOOTBALL_BASE}/fixtures", headers=headers, params={"id": match_id})
-            if r.status_code == 200:
-                resp = r.json().get("response", [])
-                if resp:
-                    detail = fmt_match(resp[0])
-                    # Cache live fixture 45s, finished 1hr
-                    ttl = 45 if detail["status"] == "live" else 3600
-                    set_cache(cache_key, detail, ttl_seconds=ttl)
-                    return detail
-        except Exception:
-            pass
+    stale = get_stale_cache(cache_key)
+    if stale is not None:
+        if isinstance(stale, dict) and stale.get("_not_found"):
+            raise HTTPException(status_code=404, detail=f"Match {match_id} not found")
+        return {**stale, "data_source": "stale"}
 
     # Check cached fixture lists before falling back
     for c_key in ["fixtures_1H-2H-ET-P-LIVE_top_tier_v5", "fixtures_NS_top_tier_v5", "fixtures_FT-AET-PEN_top_tier_v5"]:
@@ -518,36 +510,28 @@ async def get_match_detail(match_id: int):
             for m in c_list:
                 if m.get("id") == match_id:
                     set_cache(cache_key, m, ttl_seconds=300)
-                    return m
+                    return {**m, "data_source": "cache"}
 
-    # Fallback to local mock matches if not found
-    for m in MOCK_LIVE_MATCHES + MOCK_UPCOMING_MATCHES + MOCK_FINISHED_MATCHES:
-        if m["id"] == match_id:
-            return m
-    return MOCK_LIVE_MATCHES[0]
+    # Fallback to local mock matches ONLY if match_id is a mock id!
+    if match_id in MOCK_MATCH_MAP:
+        return {**MOCK_MATCH_MAP[match_id], "data_source": "mock"}
+
+    return JSONResponse(status_code=503, content={"error": "upstream_unavailable"})
 
 @router.get("/{match_id}/stats")
 async def get_match_stats(match_id: int):
     if is_mock_mode():
-        return MOCK_STATS.get(match_id, _default_mock_stats())
+        return {**MOCK_STATS.get(match_id, _default_mock_stats()), "data_source": "mock"}
     
     cache_key = f"match_stats_{match_id}"
     cached = get_cache(cache_key)
     if cached is not None:
-        return cached
+        return {**cached, "data_source": "cache"}
 
-    headers = get_headers()
-    if not headers.get("x-apisports-key"):
-        return MOCK_STATS.get(match_id, _default_mock_stats())
-    async with httpx.AsyncClient(timeout=8.0) as client:
-        try:
-            r = await client.get(f"{API_FOOTBALL_BASE}/fixtures/statistics", headers=headers, params={"fixture": match_id})
-            if r.status_code != 200:
-                return MOCK_STATS.get(match_id, _default_mock_stats())
-            data = r.json()
-            response = data.get("response", [])
-            if len(response) < 2:
-                return MOCK_STATS.get(match_id, _default_mock_stats())
+    r = await api_football_request("/fixtures/statistics", params={"fixture": match_id}, cache_key=cache_key)
+    if r:
+        response = r.get("response", [])
+        if len(response) >= 2:
             home_stats = {s["type"]: s["value"] for s in response[0].get("statistics", [])}
             away_stats = {s["type"]: s["value"] for s in response[1].get("statistics", [])}
             def parse_pct(v):
@@ -582,77 +566,67 @@ async def get_match_stats(match_id: int):
                 "xg_home": parse_float(home_stats.get("expected_goals")),
                 "xg_away": parse_float(away_stats.get("expected_goals")),
             }
-            # Cache match stats for 30s during matches, 1 hour if finished
-            set_cache(cache_key, result, ttl_seconds=30)
-            return result
-        except Exception:
-            return MOCK_STATS.get(match_id, _default_mock_stats())
+            set_cache(cache_key, result, ttl_seconds=TTL_MATCH_STATS)
+            return {**result, "data_source": "live"}
+
+    stale = get_stale_cache(cache_key)
+    if stale is not None:
+        return {**stale, "data_source": "stale"}
+    return {**MOCK_STATS.get(match_id, _default_mock_stats()), "data_source": "mock"}
 
 @router.get("/{match_id}/events")
 async def get_match_events(match_id: int):
     if is_mock_mode():
-        return {"events": MOCK_EVENTS.get(match_id, [])}
+        return {"events": MOCK_EVENTS.get(match_id, []), "data_source": "mock"}
 
     cache_key = f"match_events_{match_id}"
     cached = get_cache(cache_key)
     if cached is not None:
-        return cached
+        return {**cached, "data_source": "cache"}
 
-    headers = get_headers()
-    if not headers.get("x-apisports-key"):
-        return {"events": MOCK_EVENTS.get(match_id, [])}
-    async with httpx.AsyncClient(timeout=8.0) as client:
-        try:
-            r = await client.get(f"{API_FOOTBALL_BASE}/fixtures/events", headers=headers, params={"fixture": match_id})
-            if r.status_code != 200:
-                return {"events": MOCK_EVENTS.get(match_id, [])}
-            data = r.json()
-            events = []
-            for ev in data.get("response", []):
-                t = ev.get("type", "")
-                detail = ev.get("detail", "")
-                etype = "goal"
-                if t == "Card":
-                    etype = "yellow_card" if "Yellow" in detail else "red_card"
-                elif t == "subst":
-                    etype = "substitution"
-                elif t == "Var":
-                    etype = "var"
-                events.append({
-                    "minute": ev.get("time", {}).get("elapsed", 0),
-                    "type": etype,
-                    "team": ev.get("team", {}).get("name", ""),
-                    "player": ev.get("player", {}).get("name", ""),
-                    "detail": detail,
-                })
-            result = {"events": events}
-            set_cache(cache_key, result, ttl_seconds=30)
-            return result
-        except Exception:
-            return {"events": MOCK_EVENTS.get(match_id, [])}
+    r = await api_football_request("/fixtures/events", params={"fixture": match_id}, cache_key=cache_key)
+    if r:
+        events = []
+        for ev in r.get("response", []):
+            t = ev.get("type", "")
+            detail = ev.get("detail", "")
+            etype = "goal"
+            if t == "Card":
+                etype = "yellow_card" if "Yellow" in detail else "red_card"
+            elif t == "subst":
+                etype = "substitution"
+            elif t == "Var":
+                etype = "var"
+            events.append({
+                "minute": ev.get("time", {}).get("elapsed", 0),
+                "type": etype,
+                "team": ev.get("team", {}).get("name", ""),
+                "player": ev.get("player", {}).get("name", ""),
+                "detail": detail,
+            })
+        result = {"events": events}
+        set_cache(cache_key, result, ttl_seconds=TTL_MATCH_EVENTS)
+        return {**result, "data_source": "live"}
+
+    stale = get_stale_cache(cache_key)
+    if stale is not None:
+        return {**stale, "data_source": "stale"}
+    return {"events": MOCK_EVENTS.get(match_id, []), "data_source": "mock"}
 
 @router.get("/{match_id}/lineups")
 async def get_match_lineups(match_id: int):
     if is_mock_mode():
-        return MOCK_LINEUPS.get(match_id, _default_mock_lineups(match_id))
+        return {**MOCK_LINEUPS.get(match_id, _default_mock_lineups(match_id)), "data_source": "mock"}
 
     cache_key = f"match_lineups_{match_id}"
     cached = get_cache(cache_key)
     if cached is not None:
-        return cached
+        return {**cached, "data_source": "cache"}
 
-    headers = get_headers()
-    if not headers.get("x-apisports-key"):
-        return MOCK_LINEUPS.get(match_id, _default_mock_lineups(match_id))
-    async with httpx.AsyncClient(timeout=8.0) as client:
-        try:
-            r = await client.get(f"{API_FOOTBALL_BASE}/fixtures/lineups", headers=headers, params={"fixture": match_id})
-            if r.status_code != 200:
-                return MOCK_LINEUPS.get(match_id, _default_mock_lineups(match_id))
-            data = r.json()
-            response = data.get("response", [])
-            if not response:
-                return MOCK_LINEUPS.get(match_id, _default_mock_lineups(match_id))
+    r = await api_football_request("/fixtures/lineups", params={"fixture": match_id}, cache_key=cache_key)
+    if r:
+        response = r.get("response", [])
+        if response:
             def parse_players(team_data):
                 players = []
                 formation = team_data.get("formation", "4-3-3")
@@ -675,11 +649,13 @@ async def get_match_lineups(match_id: int):
             home_players, home_formation = parse_players(response[0]) if len(response) > 0 else ([], "4-3-3")
             away_players, away_formation = parse_players(response[1]) if len(response) > 1 else ([], "4-3-3")
             result = {"home": home_formation, "away": away_formation, "home_players": home_players, "away_players": away_players}
-            # Lineups rarely change once announced, cache for 15 minutes
-            set_cache(cache_key, result, ttl_seconds=900)
-            return result
-        except Exception:
-            return MOCK_LINEUPS.get(match_id, _default_mock_lineups(match_id))
+            set_cache(cache_key, result, ttl_seconds=TTL_MATCH_LINEUPS)
+            return {**result, "data_source": "live"}
+
+    stale = get_stale_cache(cache_key)
+    if stale is not None:
+        return {**stale, "data_source": "stale"}
+    return {**MOCK_LINEUPS.get(match_id, _default_mock_lineups(match_id)), "data_source": "mock"}
 
 def _empty_lineups():
     return {"home": "4-3-3", "away": "4-3-3", "home_players": [], "away_players": []}

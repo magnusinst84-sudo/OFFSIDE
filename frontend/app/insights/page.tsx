@@ -76,15 +76,17 @@ const FEATURE_IMPORTANCE = [
   { feature: 'Venue Context', weight: 8 },
 ]
 
-// 5. Impact Player Table (Sorted descending: Messi 9.4 #1, Mbappé 9.2 #2)
+// 5. Impact Player Table (Sorted descending by European performance)
 const IMPACT_PLAYERS = [
-  { rank: 1, name: 'Lionel Messi', team: 'Argentina', impact: 9.4, xg: 0.82, xa: 0.65, form: 'A+' },
-  { rank: 2, name: 'Kylian Mbappé', team: 'France', impact: 9.2, xg: 0.94, xa: 0.38, form: 'A+' },
-  { rank: 3, name: 'Erling Haaland', team: 'Norway / Man City', impact: 8.9, xg: 1.05, xa: 0.18, form: 'A' },
-  { rank: 4, name: 'Vinicius Junior', team: 'Brazil / Real Madrid', impact: 8.8, xg: 0.76, xa: 0.44, form: 'A' },
-  { rank: 5, name: 'Bukayo Saka', team: 'England / Arsenal', impact: 8.7, xg: 0.62, xa: 0.52, form: 'A' },
-  { rank: 6, name: 'Florian Wirtz', team: 'Germany / Leverkusen', impact: 8.6, xg: 0.58, xa: 0.61, form: 'A' },
-  { rank: 7, name: 'Rodri', team: 'Spain / Man City', impact: 8.5, xg: 0.35, xa: 0.48, form: 'A' },
+  { rank: 1, name: 'Kylian Mbappé', team: 'France / Real Madrid', impact: 9.3, xg: 0.94, xa: 0.38, form: 'A+' },
+  { rank: 2, name: 'Erling Haaland', team: 'Norway / Man City', impact: 9.2, xg: 1.05, xa: 0.18, form: 'A+' },
+  { rank: 3, name: 'Vinicius Junior', team: 'Brazil / Real Madrid', impact: 9.0, xg: 0.78, xa: 0.44, form: 'A' },
+  { rank: 4, name: 'Jude Bellingham', team: 'England / Real Madrid', impact: 8.9, xg: 0.72, xa: 0.55, form: 'A' },
+  { rank: 5, name: 'Mohamed Salah', team: 'Egypt / Liverpool', impact: 8.8, xg: 0.82, xa: 0.65, form: 'A' },
+  { rank: 6, name: 'Bukayo Saka', team: 'England / Arsenal', impact: 8.7, xg: 0.64, xa: 0.52, form: 'A' },
+  { rank: 7, name: 'Florian Wirtz', team: 'Germany / Leverkusen', impact: 8.6, xg: 0.58, xa: 0.61, form: 'A' },
+  { rank: 8, name: 'Rodri', team: 'Spain / Man City', impact: 8.5, xg: 0.35, xa: 0.48, form: 'A' },
+  { rank: 9, name: 'Lamine Yamal', team: 'Spain / Barcelona', impact: 8.5, xg: 0.52, xa: 0.62, form: 'A' },
 ]
 
 // 6. Backtest: 2022 FIFA World Cup (Single model: XGBoost Classifier)

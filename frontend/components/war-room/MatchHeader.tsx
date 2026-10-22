@@ -140,12 +140,24 @@ export function MatchHeader({ match, prediction, isLoading }: MatchHeaderProps) 
             </div>
           )}
 
-          {/* Status Badge */}
-          <div className="mt-2">
+          {/* Status Badge & Data Source Badge */}
+          <div className="mt-2 flex items-center justify-center gap-2 flex-wrap">
             <StatusBadge
               status={isLive ? 'live' : isFinished ? 'finished' : 'upcoming'}
               minute={match?.minute}
             />
+            {match?.data_source && match.data_source !== 'live' && (
+              <span
+                className="px-2 py-0.5 rounded text-[11px] font-mono font-medium tracking-wide uppercase"
+                style={{
+                  background: match.data_source === 'mock' ? 'rgba(232, 0, 61, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                  color: match.data_source === 'mock' ? '#FF4D6D' : '#60A5FA',
+                  border: `1px solid ${match.data_source === 'mock' ? 'rgba(232, 0, 61, 0.35)' : 'rgba(59, 130, 246, 0.35)'}`,
+                }}
+              >
+                {match.data_source === 'mock' ? 'Demo data' : 'Cached'}
+              </span>
+            )}
           </div>
         </div>
 

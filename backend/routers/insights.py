@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from api_football import api_football_request
 
 router = APIRouter()
 
@@ -23,16 +24,16 @@ PREDICTION_LOG = [
 ]
 
 PLAYER_RANKINGS = [
-    {"rank": 1, "player": "Kylian Mbappé", "team": "France", "impact": 9.2, "xg": 6.8, "xa": 2.1, "momentum": 88, "form": "A"},
-    {"rank": 2, "player": "Lionel Messi", "team": "Argentina", "impact": 9.4, "xg": 5.9, "xa": 3.4, "momentum": 91, "form": "A+"},
-    {"rank": 3, "player": "Vinicius Jr.", "team": "Brazil", "impact": 8.9, "xg": 4.2, "xa": 2.8, "momentum": 84, "form": "A"},
-    {"rank": 4, "player": "Erling Haaland", "team": "Norway", "impact": 8.7, "xg": 7.1, "xa": 0.9, "momentum": 79, "form": "B+"},
-    {"rank": 5, "player": "Jude Bellingham", "team": "England", "impact": 8.5, "xg": 3.8, "xa": 2.6, "momentum": 82, "form": "A"},
-    {"rank": 6, "player": "Lamine Yamal", "team": "Spain", "impact": 8.3, "xg": 2.9, "xa": 2.4, "momentum": 86, "form": "A"},
-    {"rank": 7, "player": "Pedri", "team": "Spain", "impact": 8.1, "xg": 2.1, "xa": 3.0, "momentum": 80, "form": "B+"},
-    {"rank": 8, "player": "Harry Kane", "team": "England", "impact": 7.9, "xg": 5.3, "xa": 1.2, "momentum": 74, "form": "B"},
-    {"rank": 9, "player": "Antoine Griezmann", "team": "France", "impact": 7.7, "xg": 3.4, "xa": 2.2, "momentum": 76, "form": "B+"},
-    {"rank": 10, "player": "Bukayo Saka", "team": "England", "impact": 7.5, "xg": 3.1, "xa": 1.9, "momentum": 78, "form": "B+"},
+    {"rank": 1, "player": "Kylian Mbappé", "team": "France", "impact": 9.3, "xg": 6.8, "xa": 2.1, "momentum": 88, "form": "A+"},
+    {"rank": 2, "player": "Erling Haaland", "team": "Norway", "impact": 9.2, "xg": 7.1, "xa": 0.9, "momentum": 85, "form": "A+"},
+    {"rank": 3, "player": "Vinicius Jr.", "team": "Brazil", "impact": 9.0, "xg": 4.8, "xa": 2.8, "momentum": 84, "form": "A"},
+    {"rank": 4, "player": "Jude Bellingham", "team": "England", "impact": 8.9, "xg": 4.2, "xa": 2.9, "momentum": 83, "form": "A"},
+    {"rank": 5, "player": "Mohamed Salah", "team": "Egypt", "impact": 8.8, "xg": 5.4, "xa": 3.2, "momentum": 86, "form": "A"},
+    {"rank": 6, "player": "Bukayo Saka", "team": "England", "impact": 8.7, "xg": 3.8, "xa": 2.6, "momentum": 82, "form": "A"},
+    {"rank": 7, "player": "Florian Wirtz", "team": "Germany", "impact": 8.6, "xg": 3.4, "xa": 3.6, "momentum": 84, "form": "A"},
+    {"rank": 8, "player": "Lamine Yamal", "team": "Spain", "impact": 8.5, "xg": 2.9, "xa": 2.4, "momentum": 86, "form": "A"},
+    {"rank": 9, "player": "Pedri", "team": "Spain", "impact": 8.2, "xg": 2.1, "xa": 3.0, "momentum": 80, "form": "B+"},
+    {"rank": 10, "player": "Harry Kane", "team": "England", "impact": 8.1, "xg": 5.3, "xa": 1.2, "momentum": 74, "form": "B"},
 ]
 
 @router.get("/")

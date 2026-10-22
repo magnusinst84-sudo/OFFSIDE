@@ -21,6 +21,8 @@ export interface TeamInfo {
   goals?: number | null
 }
 
+export type DataSource = 'live' | 'cache' | 'stale' | 'mock'
+
 export interface Match {
   id: number
   home_team: TeamInfo
@@ -31,6 +33,7 @@ export interface Match {
   competition: string
   venue: { name: string; city: string }
   date: string
+  data_source?: DataSource
 }
 
 export interface MatchStats {
@@ -52,6 +55,7 @@ export interface MatchStats {
   dangerous_attacks_away: number
   xg_home?: number | null
   xg_away?: number | null
+  data_source?: DataSource
 }
 
 export interface MatchEvent {
@@ -60,6 +64,7 @@ export interface MatchEvent {
   team: string
   player: string
   detail?: string
+  data_source?: DataSource
 }
 
 export interface Player {
@@ -78,6 +83,7 @@ export interface Formation {
   away_players: Player[]
   home_formation?: string
   away_formation?: string
+  data_source?: DataSource
 }
 
 export interface CommentaryMessage {

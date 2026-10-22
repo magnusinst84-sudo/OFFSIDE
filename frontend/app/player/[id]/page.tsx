@@ -2,108 +2,109 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { getPlayerById as getPlayerLocal, searchPlayersLocal } from '@/lib/data/players'
-import { getPlayerById as getPlayerApi, getPlayerDNA } from '@/lib/api'
-import { Card, Input, Avatar, FallbackBadge } from '@/components/shared/Primitives'
-import {
-  RadarChart,
-  Radar,
-  PolarGrid,
-  PolarAngleAxis,
-  ResponsiveContainer,
-} from 'recharts'
-import { ArrowLeft, Search, Check, AlertTriangle, Sparkles } from 'lucide-react'
+import Image from 'next/image'
+import { ALL_LEAGUE_PLAYERS, CLUBS } from '@/lib/data/league'
+import type { LeaguePlayer } from '@/lib/data/league/league-types'
+import { Card, Input, Avatar, Button, EmptyState } from '@/components/shared/Primitives'
+import { ArrowLeft, Search, UserX, ExternalLink, Shield } from 'lucide-react'
 
-const FALLBACK_PLAYER_ID = 'fra-mbappe'
+type Position = 'GK' | 'DF' | 'MF' | 'FW'
 
-// Realistic clinical shot distribution for premier European attackers
-const DEFAULT_SHOTS = [
-  { x: 235, y: 75, xg: 0.65, outcome: 'goal', minute: 23, opponent: 'Bayern', part: 'Right foot' },
-  { x: 260, y: 68, xg: 0.52, outcome: 'goal', minute: 41, opponent: 'Dortmund', part: 'Left foot' },
-  { x: 215, y: 92, xg: 0.44, outcome: 'goal', minute: 67, opponent: 'Inter', part: 'Header' },
-  { x: 245, y: 84, xg: 0.58, outcome: 'goal', minute: 82, opponent: 'Arsenal', part: 'Right foot' },
-  { x: 255, y: 60, xg: 0.48, outcome: 'goal', minute: 89, opponent: 'Barcelona', part: 'Right foot' },
-  { x: 190, y: 110, xg: 0.28, outcome: 'on_target', minute: 14, opponent: 'Bayern', part: 'Left foot' },
-  { x: 285, y: 95, xg: 0.32, outcome: 'on_target', minute: 33, opponent: 'Dortmund', part: 'Right foot' },
-  { x: 220, y: 125, xg: 0.22, outcome: 'on_target', minute: 54, opponent: 'Inter', part: 'Right foot' },
-  { x: 265, y: 115, xg: 0.25, outcome: 'on_target', minute: 76, opponent: 'Arsenal', part: 'Left foot' },
-  { x: 165, y: 140, xg: 0.14, outcome: 'off_target', minute: 8, opponent: 'Bayern', part: 'Right foot' },
-  { x: 310, y: 135, xg: 0.12, outcome: 'off_target', minute: 29, opponent: 'Dortmund', part: 'Right foot' },
-  { x: 240, y: 160, xg: 0.18, outcome: 'off_target', minute: 61, opponent: 'Inter', part: 'Right foot' },
-  { x: 180, y: 150, xg: 0.12, outcome: 'off_target', minute: 88, opponent: 'Barcelona', part: 'Left foot' },
-]
+const POSITION_LABELS: Record<Position, string> = {
+  GK: 'Goalkeepers',
+  DF: 'Defenders',
+  MF: 'Midfielders',
+  FW: 'Forwards',
+}
+
+const POSITION_ORDER: Position[] = ['GK', 'DF', 'MF', 'FW']
 
 export default function PlayerDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const id = (params.id as string) ?? FALLBACK_PLAYER_ID
+  const id = params.id as string
 
-  const [player, setPlayer] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [player, setPlayer] = useState<LeaguePlayer | null>(null)
+  const [notFound, setNotFound] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeShot, setActiveShot] = useState<any>(null)
+  const [photoError, setPhotoError] = useState(false)
 
   useEffect(() => {
-    let mounted = true
-    const local = getPlayerLocal(id)
-    if (local) {
-      setPlayer(local)
+    setLoading(true)
+    setNotFound(false)
+    setPhotoError(false)
+
+    if (!id || !id.startsWith('api-')) {
+      setNotFound(true)
+      setPlayer(null)
       setLoading(false)
       return
     }
 
-    getPlayerApi(id)
-      .then(async res => {
-        if (!mounted) return
-        if (res && !res.error) {
-          const dnaRes = await getPlayerDNA(id).catch(() => null)
-          setPlayer({
-            ...res,
-            dna_score: dnaRes?.dna_score || 85,
-            attributes: dnaRes?.attributes || {
-              pace: 82,
-              dribbling: 84,
-              passing: 80,
-              shooting: 82,
-              defending: 48,
-              physicality: 72,
-            },
-            role_suitability: dnaRes?.role_suitability || {
-              'Inside Forward': 88,
-              'Advanced Playmaker': 82,
-              'Shadow Striker': 78,
-              'Inverted Winger': 74,
-            },
-            strengths: dnaRes?.strengths || ['Explosive acceleration in half-spaces', 'Clinical conversion inside the 18-yard box'],
-            weaknesses: dnaRes?.weaknesses || ['Aerial duel recovery', 'Defensive tracking in transition'],
-            comparison_players: dnaRes?.comparison_players || ['Vinicius Junior', 'Rodrygo', 'Bukayo Saka'],
-            ai_audit: 'Exceptional acceleration profile and off-ball movement. Operates with clinical decision-making in the final third, outperforming expected goals through precise shot placement.',
-            shots: DEFAULT_SHOTS,
-          })
-        } else {
-          setPlayer(getPlayerLocal(FALLBACK_PLAYER_ID))
-        }
-        setLoading(false)
-      })
-      .catch(() => {
-        if (mounted) {
-          setPlayer(getPlayerLocal(FALLBACK_PLAYER_ID))
-          setLoading(false)
-        }
-      })
-
-    return () => {
-      mounted = false
+    const found = ALL_LEAGUE_PLAYERS.find(p => p.id === id)
+    if (found) {
+      setPlayer(found)
+      setNotFound(false)
+    } else {
+      setNotFound(true)
+      setPlayer(null)
     }
+    setLoading(false)
   }, [id])
 
-  // Search dropdown results
+  // Club metadata lookup for competition badges
+  const clubMeta = useMemo(() => {
+    if (!player) return null
+    return CLUBS.find(c => c.id === player.club_id) || null
+  }, [player])
+
+  // Teammates in the same club squad
+  const squadByPosition = useMemo(() => {
+    if (!player) return null
+    const teammates = ALL_LEAGUE_PLAYERS.filter(p => p.club_id === player.club_id)
+    const grouped: Record<Position, LeaguePlayer[]> = {
+      GK: [],
+      DF: [],
+      MF: [],
+      FW: [],
+    }
+
+    teammates.forEach(p => {
+      if (grouped[p.position]) {
+        grouped[p.position].push(p)
+      }
+    })
+
+    // Sort within each position by shirt number
+    POSITION_ORDER.forEach(pos => {
+      grouped[pos].sort((a, b) => (a.number ?? 999) - (b.number ?? 999))
+    })
+
+    return {
+      grouped,
+      totalCount: teammates.length,
+    }
+  }, [player])
+
+  // Search dropdown over league players
   const searchResults = useMemo(() => {
     if (searchQuery.length < 2) return []
-    return searchPlayersLocal(searchQuery).slice(0, 5)
+    const q = searchQuery.toLowerCase().trim()
+
+    return ALL_LEAGUE_PLAYERS.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      p.shirt_name.toLowerCase().includes(q) ||
+      p.club.toLowerCase().includes(q)
+    ).slice(0, 5).map(p => ({
+      id: p.id,
+      name: p.name,
+      sub: p.club,
+      league: p.league,
+    }))
   }, [searchQuery])
 
-  if (loading || !player) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] text-[#94A3B8] text-[14px]">
         Loading player profile...
@@ -111,45 +112,44 @@ export default function PlayerDetailPage() {
     )
   }
 
-  // 6 full-word radar attributes
-  const radarData = [
-    { attribute: 'Pace', value: player.attributes?.pace ?? 85, fullMark: 100 },
-    { attribute: 'Dribbling', value: player.attributes?.dribbling ?? 84, fullMark: 100 },
-    { attribute: 'Passing', value: player.attributes?.passing ?? 80, fullMark: 100 },
-    { attribute: 'Shooting', value: player.attributes?.shooting ?? 86, fullMark: 100 },
-    { attribute: 'Defending', value: player.attributes?.defending ?? 45, fullMark: 100 },
-    { attribute: 'Physicality', value: player.attributes?.physicality ?? 75, fullMark: 100 },
-  ]
-
-  const shotsList = player.shots?.length ? player.shots : DEFAULT_SHOTS
-  const goalsCount = shotsList.filter((s: any) => s.outcome === 'goal').length
-  const totalShots = shotsList.length
-  const totalXg = shotsList.reduce((acc: number, s: any) => acc + (s.xg || 0.2), 0).toFixed(2)
-
-  // Role fit sorted descending
-  const roleEntries = Object.entries(player.role_suitability || {
-    'Inside Forward': 92,
-    'Advanced Striker': 88,
-    'Inverted Winger': 81,
-    'Deep-Lying Playmaker': 62,
-  }).sort((a: any, b: any) => b[1] - a[1])
+  // Not Found State
+  if (notFound || !player) {
+    return (
+      <div className="w-full max-w-[800px] mx-auto px-4 sm:px-6 pt-16 pb-32 flex flex-col items-center">
+        <EmptyState
+          icon={<UserX size={40} className="text-[#94A3B8]" />}
+          title="Player Not Found"
+          description={`No official league squad record matches identifier "${id}". Only valid official league player IDs ("api-<n>") are indexed.`}
+          action={
+            <Button
+              variant="primary"
+              onClick={() => router.push('/players')}
+              className="mt-4"
+            >
+              Back to Players
+            </Button>
+          }
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="w-full max-w-[1240px] mx-auto px-4 sm:px-6 pt-4 pb-32">
-      {/* 1. Header Row */}
+      {/* 1. Top Navigation & Quick Search */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <Link
           href="/players"
           className="inline-flex items-center gap-1.5 text-[14px] text-[#94A3B8] hover:text-white transition-colors cursor-pointer"
         >
           <ArrowLeft size={16} />
-          <span>Players</span>
+          <span>All Players</span>
         </Link>
 
         {/* Search Player Input */}
-        <div className="relative w-full sm:w-[280px]">
+        <div className="relative w-full sm:w-[320px]">
           <Input
-            placeholder="Search another player..."
+            placeholder="Search another club player..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             icon={<Search size={15} />}
@@ -166,7 +166,10 @@ export default function PlayerDetailPage() {
                   className="p-2.5 hover:bg-[#1A1D27] cursor-pointer flex items-center justify-between text-[13px]"
                 >
                   <span className="text-white font-medium">{p.name}</span>
-                  <span className="text-[#94A3B8] font-mono">{p.team}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#94A3B8] font-mono text-[11px]">{p.sub}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-gray-400 font-mono">{p.league}</span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -174,337 +177,199 @@ export default function PlayerDetailPage() {
         </div>
       </div>
 
-      {/* 2. Identity & Hero DNA Score */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-white/[0.08] mb-8">
-        <div className="flex items-center gap-4 sm:gap-6">
-          <Avatar name={player.name} size={64} className="sm:w-24 sm:h-24 sm:text-[32px] text-white" />
-          <div className="flex flex-col">
-            <h1
-              className="text-[28px] sm:text-[36px] font-bold text-white tracking-tight leading-tight"
-              style={{ fontFamily: 'Space Grotesk, sans-serif' }}
-            >
-              {player.name}
-            </h1>
-            <div className="text-[14px] text-[#94A3B8] flex flex-wrap items-center gap-2 mt-1">
-              <span>{player.team || 'International'}</span>
-              <span>•</span>
-              <span>{player.club || 'Club'}</span>
-              <span>•</span>
-              <span className="font-mono">{player.position}</span>
-              {player.number && (
-                <>
-                  <span>•</span>
-                  <span className="font-mono">#{player.number}</span>
-                </>
-              )}
-              {player.age && (
-                <>
-                  <span>•</span>
-                  <span>{player.age} yrs</span>
-                </>
-              )}
+      {/* 2. Hero Section */}
+      <div className="p-6 sm:p-8 rounded-2xl bg-[#0F1117] border border-white/10 mb-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center gap-5 sm:gap-7">
+            {/* Player Photo */}
+            {player.photo && !photoError ? (
+              <div className="relative w-20 h-20 sm:w-28 sm:h-28 rounded-2xl overflow-hidden border border-white/15 bg-[#1A1D27] shrink-0 shadow-lg">
+                <Image
+                  src={player.photo}
+                  alt={player.name}
+                  fill
+                  sizes="112px"
+                  className="object-cover"
+                  onError={() => setPhotoError(true)}
+                />
+              </div>
+            ) : (
+              <Avatar name={player.name} size={80} className="sm:w-28 sm:h-28 sm:text-[36px] text-white rounded-2xl shrink-0" />
+            )}
+
+            <div className="flex flex-col">
+              {/* Competition & League Badges */}
+              <div className="flex items-center gap-2 flex-wrap mb-2">
+                <span className="px-2.5 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-400 text-[11px] font-mono font-medium">
+                  {player.league}
+                </span>
+                {clubMeta?.competitions?.map(comp => (
+                  <span
+                    key={comp}
+                    className="px-2.5 py-0.5 rounded-full bg-[var(--color-accent-soft,rgba(0,255,135,0.12))] border border-[rgba(0,255,135,0.3)] text-[var(--color-accent,#00FF87)] text-[11px] font-mono font-medium flex items-center gap-1"
+                  >
+                    <Shield size={10} />
+                    {comp}
+                  </span>
+                ))}
+                {player.number_conflict && (
+                  <span
+                    className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[11px] font-mono"
+                    title="Shared shirt number in club squad"
+                  >
+                    reserve/unverified
+                  </span>
+                )}
+              </div>
+
+              {/* Player Name */}
+              <h1
+                className="text-[28px] sm:text-[40px] font-bold text-white tracking-tight leading-tight"
+                style={{ fontFamily: 'Space Grotesk, sans-serif' }}
+              >
+                {player.name}
+              </h1>
+
+              {/* Meta Row: Club (linked) • Country • Position • Number • Age */}
+              <div className="text-[14px] sm:text-[15px] text-[#94A3B8] flex flex-wrap items-center gap-2 mt-2">
+                <Link
+                  href={`/players?club=${encodeURIComponent(player.club)}`}
+                  className="text-white hover:text-[var(--color-accent,#00FF87)] font-medium transition-colors inline-flex items-center gap-1 group"
+                  title={`View all ${player.club} players`}
+                >
+                  <span>{player.club}</span>
+                  <ExternalLink size={13} className="text-[#64748B] group-hover:text-[var(--color-accent,#00FF87)]" />
+                </Link>
+                <span>•</span>
+                <span>{player.country}</span>
+                <span>•</span>
+                <span className="font-mono text-white font-medium">{player.position}</span>
+                {player.number !== null && player.number !== undefined && (
+                  <>
+                    <span>•</span>
+                    <span className="font-mono text-white">#{player.number}</span>
+                  </>
+                )}
+                {player.age !== null && player.age !== undefined && (
+                  <>
+                    <span>•</span>
+                    <span>{player.age} yrs</span>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
-
-        {/* Hero DNA Score: One number, Space Grotesk 56px */}
-        <div className="flex items-center sm:flex-col sm:items-end justify-between sm:justify-center p-3 sm:p-0 rounded-xl bg-white/[0.02] sm:bg-transparent">
-          <span
-            className="text-[44px] sm:text-[56px] font-bold leading-none"
-            style={{ color: 'var(--color-accent, #00FF87)', fontFamily: 'Space Grotesk, sans-serif' }}
-          >
-            {player.dna_score ?? 85}
-          </span>
-          <span className="text-[12px] text-[#94A3B8] uppercase tracking-wider mt-1">
-            DNA score
-          </span>
-        </div>
       </div>
 
-      {/* 3. Main Two-Column Layout (7/12 Main, 5/12 Side) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* ─── MAIN COLUMN (7/12) ─── */}
-        <div className="lg:col-span-7 flex flex-col gap-8">
-          {/* 1. Attribute Profile Card */}
-          <Card className="p-6">
+      {/* 3. Squad Section: Teammates Grouped by Position */}
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
+          <div className="flex items-center gap-3">
             <h2
-              className="text-[18px] font-semibold text-white tracking-tight mb-4"
+              className="text-[20px] font-semibold text-white tracking-tight"
               style={{ fontFamily: 'Space Grotesk, sans-serif' }}
             >
-              Tactical Attribute Profile
+              {player.club} Squad
             </h2>
+            <span className="text-[13px] text-[#64748B] font-mono">
+              ({squadByPosition?.totalCount ?? 0} players indexed)
+            </span>
+          </div>
 
-            {/* Radar Chart (360px desktop, 320px mobile) */}
-            <div className="w-full flex items-center justify-center">
-              <div className="w-[320px] sm:w-[360px] h-[300px] sm:h-[340px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart data={radarData} outerRadius="70%">
-                    <PolarGrid stroke="rgba(255,255,255,0.08)" />
-                    <PolarAngleAxis
-                      dataKey="attribute"
-                      tick={{ fill: '#F0F4F8', fontSize: 13, fontFamily: 'Inter, sans-serif' }}
-                    />
-                    <Radar
-                      name="Attributes"
-                      dataKey="value"
-                      stroke="var(--color-accent, #00FF87)"
-                      strokeWidth={2}
-                      fill="var(--color-accent, #00FF87)"
-                      fillOpacity={0.15}
-                    />
-                  </RadarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
+          <Link
+            href={`/players?club=${encodeURIComponent(player.club)}`}
+            className="text-[13px] text-[var(--color-accent,#00FF87)] hover:underline font-medium"
+          >
+            Filter roster by this club →
+          </Link>
+        </div>
 
-            {/* All Six Attributes List */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-6 border-t border-white/[0.08]">
-              {radarData.map(attr => (
-                <div key={attr.attribute} className="flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between text-[13px]">
-                    <span className="text-[#94A3B8]">{attr.attribute}</span>
-                    <span className="font-mono font-semibold text-white">{attr.value}</span>
-                  </div>
-                  <div className="w-full h-1.5 rounded-full bg-[#1A1D27] overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-[var(--color-accent,#00FF87)]"
-                      style={{ width: `${attr.value}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
+        {squadByPosition && POSITION_ORDER.map(pos => {
+          const group = squadByPosition.grouped[pos]
+          if (!group || group.length === 0) return null
 
-          {/* 2. Shot Map Card */}
-          <Card className="p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-              <div>
-                <h2
-                  className="text-[18px] font-semibold text-white tracking-tight"
-                  style={{ fontFamily: 'Space Grotesk, sans-serif' }}
-                >
-                  Shot Map
-                </h2>
-                <span className="text-[12px] text-[#94A3B8]">
-                  {totalShots} shots, {goalsCount} goals, {totalXg} xG (Season)
+          return (
+            <div key={pos} className="flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-[12px] font-mono uppercase tracking-wider text-[#94A3B8]">
+                  {POSITION_LABELS[pos]}
                 </span>
+                <span className="text-[11px] font-mono text-[#64748B]">({group.length})</span>
               </div>
-              <FallbackBadge text="Approximate shot locations" />
-            </div>
 
-            {/* Half-pitch SVG: max 480px, centered */}
-            <div className="w-full max-w-[480px] mx-auto aspect-[480/340] rounded-xl bg-[#0a1710] border border-white/[0.08] relative overflow-hidden flex items-center justify-center">
-              <svg
-                viewBox="0 0 480 340"
-                className="absolute inset-0 w-full h-full pointer-events-none"
-                stroke="rgba(255,255,255,0.12)"
-                strokeWidth="1.5"
-                fill="none"
-              >
-                {/* Half-pitch boundary */}
-                <rect x="20" y="15" width="440" height="310" />
-
-                {/* Goal at top */}
-                <rect x="180" y="5" width="120" height="10" stroke="var(--color-accent,#00FF87)" strokeWidth="2" />
-
-                {/* Penalty area (18-yard box) */}
-                <rect x="90" y="15" width="300" height="135" />
-
-                {/* Goal area (6-yard box) */}
-                <rect x="165" y="15" width="150" height="45" />
-
-                {/* Penalty spot and arc */}
-                <circle cx="240" cy="85" r="2.5" fill="rgba(255,255,255,0.3)" />
-                <path d="M 195 150 A 65 65 0 0 0 285 150" />
-
-                {/* Halfway line at bottom */}
-                <line x1="20" y1="325" x2="460" y2="325" />
-                <path d="M 200 325 A 40 40 0 0 1 280 325" />
-              </svg>
-
-              {/* Shot Circles: non-team color encoding */}
-              {shotsList.map((shot: any, idx: number) => {
-                const isGoal = shot.outcome === 'goal'
-                const isOnTarget = shot.outcome === 'on_target'
-                const radius = Math.max(5, Math.min(14, (shot.xg || 0.2) * 18))
-
-                return (
-                  <div
-                    key={idx}
-                    onClick={() => setActiveShot(shot)}
-                    className="group absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10"
-                    style={{ left: `${(shot.x / 480) * 100}%`, top: `${(shot.y / 340) * 100}%` }}
-                  >
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
+                {group.map(tm => {
+                  const isCurrent = tm.id === player.id
+                  return (
                     <div
-                      className="rounded-full transition-transform hover:scale-130"
-                      style={{
-                        width: radius * 2,
-                        height: radius * 2,
-                        background: isGoal ? 'var(--color-accent, #00FF87)' : 'transparent',
-                        border: isGoal
-                          ? '1px solid var(--color-accent, #00FF87)'
-                          : isOnTarget
-                          ? '2px solid #ffffff'
-                          : '2px solid #64748B',
-                        opacity: 0.85,
-                      }}
-                    />
-                  </div>
-                )
-              })}
-            </div>
+                      key={tm.id}
+                      onClick={() => !isCurrent && router.push(`/player/${tm.id}`)}
+                      className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 ${
+                        isCurrent
+                          ? 'bg-[var(--color-accent-soft,rgba(0,255,135,0.1))] border-[var(--color-accent,#00FF87)]/40 shadow-sm cursor-default'
+                          : 'bg-[#0F1117] border-white/[0.08] hover:border-white/20 hover:bg-[#1A1D27] cursor-pointer'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        {tm.photo ? (
+                          <div className="relative w-9 h-9 rounded-full overflow-hidden bg-[#1A1D27] border border-white/10 shrink-0">
+                            <Image
+                              src={tm.photo}
+                              alt={tm.name}
+                              fill
+                              sizes="36px"
+                              className="object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <Avatar name={tm.name} size={36} />
+                        )}
 
-            {/* Shot Details Box if selected */}
-            {activeShot && (
-              <div className="mt-3 p-3 rounded-lg bg-[#1A1D27] border border-white/10 flex items-center justify-between text-[12px]">
-                <div>
-                  <span className="font-semibold text-white capitalize">{activeShot.outcome.replace('_', ' ')}</span>
-                  <span className="text-[#94A3B8] ml-2">vs {activeShot.opponent} • {activeShot.minute}&apos; • {activeShot.part}</span>
-                </div>
-                <span className="font-mono text-[var(--color-accent,#00FF87)] font-bold">{activeShot.xg} xG</span>
-              </div>
-            )}
+                        <div className="flex flex-col min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className={`text-[13px] font-medium truncate ${isCurrent ? 'text-[var(--color-accent,#00FF87)] font-semibold' : 'text-white'}`}>
+                              {tm.name}
+                            </span>
+                            {isCurrent && (
+                              <span className="px-1.5 py-0.2 rounded bg-[var(--color-accent,#00FF87)] text-black text-[9px] font-bold uppercase font-mono">
+                                Current
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[11px] text-[#94A3B8] font-mono">
+                            <span>#{tm.number ?? '—'}</span>
+                            <span>•</span>
+                            <span>{tm.age !== null ? `${tm.age}y` : '—'}</span>
+                            {tm.number_conflict && (
+                              <>
+                                <span>•</span>
+                                <span className="text-amber-400/90 text-[10px]" title="Shared shirt number in club squad">
+                                  reserve/unverified
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
 
-            {/* Legend below the map: Never clipped */}
-            <div className="flex flex-wrap items-center justify-center gap-6 text-[12px] text-[#94A3B8] mt-4 pt-3 border-t border-white/[0.08]">
-              <span className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-[var(--color-accent,#00FF87)]" />
-                Goal
-              </span>
-              <span className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full border-2 border-white" />
-                On target / Saved
-              </span>
-              <span className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full border-2 border-[#64748B]" />
-                Off target
-              </span>
-            </div>
-          </Card>
-        </div>
-
-        {/* ─── SIDE COLUMN (5/12) ─── */}
-        <div className="lg:col-span-5 flex flex-col gap-6">
-          {/* 1. Stats List (Season Scope) */}
-          <Card className="p-6">
-            <h2
-              className="text-[16px] font-semibold text-white tracking-tight mb-4"
-              style={{ fontFamily: 'Space Grotesk, sans-serif' }}
-            >
-              Stats, Season
-            </h2>
-            <div className="flex flex-col divide-y divide-white/[0.06]">
-              {[
-                { label: 'Goals', value: player.goals ?? 27 },
-                { label: 'Assists', value: player.assists ?? 12 },
-                { label: 'Expected Goals (xG)', value: typeof player.xg === 'number' ? player.xg.toFixed(2) : '24.80' },
-                { label: 'Expected Assists (xA)', value: typeof player.xa === 'number' ? player.xa.toFixed(2) : '10.40' },
-                { label: 'Minutes played', value: player.minutes_played?.toLocaleString() || '2,480' },
-              ].map(st => (
-                <div key={st.label} className="flex items-center justify-between h-[48px]">
-                  <span className="text-[14px] text-[#94A3B8]">{st.label}</span>
-                  <span className="font-mono text-[14px] font-semibold text-white">{st.value}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {/* 2. Strengths & Vulnerabilities (Two separate lists) */}
-          <Card className="p-6 flex flex-col gap-6">
-            <div>
-              <h3 className="text-[14px] font-semibold text-white mb-3">Key Strengths</h3>
-              <div className="flex flex-col gap-2.5">
-                {(player.strengths || ['High pace in half-spaces', 'Clinical finishing']).map((s: string, i: number) => (
-                  <div key={i} className="flex items-start gap-2.5 text-[14px] leading-[1.6] text-white/90">
-                    <Check size={16} className="text-[var(--color-accent,#00FF87)] shrink-0 mt-1" />
-                    <span>{s}</span>
-                  </div>
-                ))}
+                      <span className="font-mono text-[11px] text-[#64748B] uppercase shrink-0">
+                        {tm.position}
+                      </span>
+                    </div>
+                  )
+                })}
               </div>
             </div>
+          )
+        })}
+      </div>
 
-            <div className="pt-4 border-t border-white/[0.08]">
-              <h3 className="text-[14px] font-semibold text-white mb-3">Vulnerabilities</h3>
-              <div className="flex flex-col gap-2.5">
-                {(player.weaknesses || ['Defensive tracking back', 'Aerial duels']).map((w: string, i: number) => (
-                  <div key={i} className="flex items-start gap-2.5 text-[14px] leading-[1.6] text-white/90">
-                    <AlertTriangle size={16} className="text-[#F59E0B] shrink-0 mt-1" />
-                    <span>{w}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Card>
-
-          {/* 3. Role Fit Bars (Sorted descending, accent fill on surface-2 track, top in bold white) */}
-          <Card className="p-6">
-            <h2
-              className="text-[16px] font-semibold text-white tracking-tight mb-4"
-              style={{ fontFamily: 'Space Grotesk, sans-serif' }}
-            >
-              Tactical Role Suitability
-            </h2>
-            <div className="flex flex-col gap-3">
-              {roleEntries.map(([role, val]: any, i: number) => (
-                <div key={role} className="flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between text-[13px]">
-                    <span className={i === 0 ? 'font-bold text-white' : 'text-[#94A3B8]'}>
-                      {role}
-                    </span>
-                    <span className="font-mono text-white font-medium">{val}%</span>
-                  </div>
-                  <div className="w-full h-2 rounded-full bg-[#1A1D27] overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-[var(--color-accent,#00FF87)]"
-                      style={{ width: `${val}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {/* 4. Similar Players Chips */}
-          <Card className="p-6">
-            <h2
-              className="text-[16px] font-semibold text-white tracking-tight mb-3"
-              style={{ fontFamily: 'Space Grotesk, sans-serif' }}
-            >
-              Similar Profiles
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              {(player.comparison_players || ['Vinicius Junior', 'Rodrygo']).map((name: string) => (
-                <div
-                  key={name}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1A1D27] border border-white/10 text-[13px] text-white"
-                >
-                  <Avatar name={name} size={20} />
-                  <span>{name}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {/* 5. AI Audit Section */}
-          <Card className="p-6">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 text-[11px] font-mono font-semibold">
-                AI AUDIT
-              </span>
-              <h2
-                className="text-[15px] font-semibold text-white tracking-tight"
-                style={{ fontFamily: 'Space Grotesk, sans-serif' }}
-              >
-                Algorithmic Assessment
-              </h2>
-            </div>
-            <p className="text-[14px] leading-[1.6] text-[#94A3B8]">
-              {player.ai_audit ||
-                'High-confidence tactical fingerprint confirms elite-tier offensive efficiency. Consistent spatial awareness enables persistent isolation creation against low blocks.'}
-            </p>
-          </Card>
-        </div>
+      {/* 4. Single muted note at bottom */}
+      <div className="mt-12 pt-6 border-t border-white/[0.08] text-center">
+        <p className="text-[13px] text-[#64748B] font-mono">
+          Performance analytics aren&apos;t available for club players yet.
+        </p>
       </div>
     </div>
   )

@@ -1,0 +1,727 @@
+{
+  "season": "2026-27",
+  "_sources": "Premier League: Wikipedia 2026-27 Premier League (20 clubs, promoted Coventry/Ipswich/Hull, relegated West Ham/Burnley/Wolves). La Liga: 2025-26 clubs minus Mallorca/Girona/Oviedo plus Racing Santander/Deportivo/Malaga. Bundesliga: minus Wolfsburg/Heidenheim/St Pauli plus Schalke/Elversberg/Paderborn. Serie A: minus Cremonese/Verona/Pisa plus Venezia/Frosinone/Monza. Ligue 1: minus Metz/Nantes plus Troyes/Le Mans.",
+  "leagues": {
+    "Premier League": [
+      "Arsenal",
+      "Aston Villa",
+      "Bournemouth",
+      "Brentford",
+      "Brighton",
+      "Chelsea",
+      "Coventry",
+      "Crystal Palace",
+      "Everton",
+      "Fulham",
+      "Hull",
+      "Ipswich",
+      "Leeds",
+      "Liverpool",
+      "Manchester City",
+      "Manchester United",
+      "Newcastle",
+      "Nottingham Forest",
+      "Sunderland",
+      "Tottenham"
+    ],
+    "La Liga": [
+      "Alaves",
+      "Athletic Club",
+      "Atletico Madrid",
+      "Barcelona",
+      "Celta Vigo",
+      "Deportivo La Coruna",
+      "Elche",
+      "Espanyol",
+      "Getafe",
+      "Levante",
+      "Malaga",
+      "Osasuna",
+      "Racing Santander",
+      "Rayo Vallecano",
+      "Real Betis",
+      "Real Madrid",
+      "Real Sociedad",
+      "Sevilla",
+      "Valencia",
+      "Villarreal"
+    ],
+    "Bundesliga": [
+      "Augsburg",
+      "Bayern Munich",
+      "Werder Bremen",
+      "Borussia Dortmund",
+      "Eintracht Frankfurt",
+      "Freiburg",
+      "Hamburger SV",
+      "Hoffenheim",
+      "Koln",
+      "RB Leipzig",
+      "Bayer Leverkusen",
+      "Borussia Monchengladbach",
+      "Mainz",
+      "VfB Stuttgart",
+      "Union Berlin",
+      "Schalke 04",
+      "Elversberg",
+      "Paderborn"
+    ],
+    "Serie A": [
+      "Atalanta",
+      "Bologna",
+      "Cagliari",
+      "Como",
+      "Fiorentina",
+      "Frosinone",
+      "Genoa",
+      "Inter",
+      "Juventus",
+      "Lazio",
+      "Lecce",
+      "AC Milan",
+      "Monza",
+      "Napoli",
+      "Parma",
+      "AS Roma",
+      "Sassuolo",
+      "Torino",
+      "Udinese",
+      "Venezia"
+    ],
+    "Ligue 1": [
+      "Angers",
+      "Auxerre",
+      "Stade Brestois 29",
+      "Le Havre",
+      "Lens",
+      "Lille",
+      "Lorient",
+      "Lyon",
+      "Marseille",
+      "Monaco",
+      "Nice",
+      "Paris FC",
+      "Paris Saint Germain",
+      "Rennes",
+      "Strasbourg",
+      "Toulouse",
+      "Troyes",
+      "Le Mans"
+    ]
+  },
+  "overrides": {
+    "Koln": {
+      "id": 192,
+      "name": "1. FC Köln"
+    },
+    "Troyes": {
+      "id": 110,
+      "name": "Estac Troyes"
+    },
+    "Stade Brestois 29": {
+      "id": 106,
+      "name": "Stade Brestois 29"
+    },
+    "Club Brugge": {
+      "id": 569,
+      "name": "Club Brugge KV"
+    },
+    "Feyenoord": {
+      "id": 209,
+      "name": "Feyenoord"
+    },
+    "LASK": {
+      "id": 1026,
+      "name": "Lask Linz"
+    },
+    "Benfica": {
+      "id": 211,
+      "name": "Benfica"
+    },
+    "Aarhus": {
+      "id": 406,
+      "name": "AGF"
+    },
+    "St. Truiden": {
+      "id": 735,
+      "name": "Sint-Truiden"
+    }
+  },
+  "competitions": {
+    "UCL": [
+      "Arsenal",
+      "Manchester City",
+      "Manchester United",
+      "Aston Villa",
+      "Liverpool",
+      "Real Madrid",
+      "Barcelona",
+      "Atletico Madrid",
+      "Villarreal",
+      "Real Betis",
+      "Bayern Munich",
+      "Borussia Dortmund",
+      "RB Leipzig",
+      "VfB Stuttgart",
+      "Inter",
+      "Napoli",
+      "AS Roma",
+      "Como",
+      "Paris Saint Germain",
+      "Lens",
+      "Lille"
+    ],
+    "UEL": [
+      "Bournemouth",
+      "Sunderland",
+      "Crystal Palace",
+      "AC Milan",
+      "Juventus",
+      "Real Sociedad",
+      "Celta Vigo",
+      "Hoffenheim",
+      "Bayer Leverkusen",
+      "Marseille",
+      "Rennes",
+      "Lyon"
+    ],
+    "UECL": [
+      "Brighton",
+      "Atalanta",
+      "Getafe",
+      "Freiburg",
+      "Monaco"
+    ]
+  },
+  "_europe_note": "Non-big-5 clubs in the 2026-27 UEFA league phases, from a Google summary citing uefa.com (UNVERIFIED). Order = UCL, UEL, UECL so a partial run finishes the higher-priority competitions first. 'country' uses API-Football spelling; 'search' is the short query sent to /teams?search.",
+  "europe": [
+    {
+      "name": "AEK Athens",
+      "country": "Greece",
+      "competitions": [
+        "UCL"
+      ],
+      "search": "AEK"
+    },
+    {
+      "name": "Bodo/Glimt",
+      "country": "Norway",
+      "competitions": [
+        "UCL"
+      ],
+      "search": "Glimt"
+    },
+    {
+      "name": "Club Brugge",
+      "country": "Belgium",
+      "competitions": [
+        "UCL"
+      ],
+      "search": "Brugge"
+    },
+    {
+      "name": "Fenerbahce",
+      "country": "Turkey",
+      "competitions": [
+        "UCL"
+      ]
+    },
+    {
+      "name": "Feyenoord",
+      "country": "Netherlands",
+      "competitions": [
+        "UCL"
+      ]
+    },
+    {
+      "name": "Galatasaray",
+      "country": "Turkey",
+      "competitions": [
+        "UCL"
+      ]
+    },
+    {
+      "name": "LASK",
+      "country": "Austria",
+      "competitions": [
+        "UCL"
+      ]
+    },
+    {
+      "name": "Porto",
+      "country": "Portugal",
+      "competitions": [
+        "UCL"
+      ]
+    },
+    {
+      "name": "PSV Eindhoven",
+      "country": "Netherlands",
+      "competitions": [
+        "UCL"
+      ],
+      "search": "PSV"
+    },
+    {
+      "name": "Sabah",
+      "country": "Azerbaijan",
+      "competitions": [
+        "UCL"
+      ]
+    },
+    {
+      "name": "Shakhtar Donetsk",
+      "country": "Ukraine",
+      "competitions": [
+        "UCL"
+      ],
+      "search": "Shakhtar"
+    },
+    {
+      "name": "Slavia Praha",
+      "country": "Czech-Republic",
+      "competitions": [
+        "UCL"
+      ],
+      "search": "Slavia"
+    },
+    {
+      "name": "Slovan Bratislava",
+      "country": "Slovakia",
+      "competitions": [
+        "UCL"
+      ],
+      "search": "Slovan"
+    },
+    {
+      "name": "Sporting CP",
+      "country": "Portugal",
+      "competitions": [
+        "UCL"
+      ],
+      "search": "Sporting"
+    },
+    {
+      "name": "Viking",
+      "country": "Norway",
+      "competitions": [
+        "UCL"
+      ]
+    },
+    {
+      "name": "Anderlecht",
+      "country": "Belgium",
+      "competitions": [
+        "UEL"
+      ]
+    },
+    {
+      "name": "Ararat-Armenia",
+      "country": "Armenia",
+      "competitions": [
+        "UEL"
+      ],
+      "search": "Ararat"
+    },
+    {
+      "name": "AZ Alkmaar",
+      "country": "Netherlands",
+      "competitions": [
+        "UEL"
+      ],
+      "search": "Alkmaar"
+    },
+    {
+      "name": "Benfica",
+      "country": "Portugal",
+      "competitions": [
+        "UEL"
+      ]
+    },
+    {
+      "name": "Besiktas",
+      "country": "Turkey",
+      "competitions": [
+        "UEL"
+      ]
+    },
+    {
+      "name": "Celje",
+      "country": "Slovenia",
+      "competitions": [
+        "UEL"
+      ]
+    },
+    {
+      "name": "Celtic",
+      "country": "Scotland",
+      "competitions": [
+        "UEL"
+      ]
+    },
+    {
+      "name": "Dinamo Zagreb",
+      "country": "Croatia",
+      "competitions": [
+        "UEL"
+      ]
+    },
+    {
+      "name": "Ferencvarosi TC",
+      "country": "Hungary",
+      "competitions": [
+        "UEL"
+      ],
+      "search": "Ferencvaros"
+    },
+    {
+      "name": "Hapoel Beer Sheva",
+      "country": "Israel",
+      "competitions": [
+        "UEL"
+      ],
+      "search": "Beer Sheva"
+    },
+    {
+      "name": "Jagiellonia Bialystok",
+      "country": "Poland",
+      "competitions": [
+        "UEL"
+      ],
+      "search": "Jagiellonia"
+    },
+    {
+      "name": "Lech Poznan",
+      "country": "Poland",
+      "competitions": [
+        "UEL"
+      ],
+      "search": "Lech"
+    },
+    {
+      "name": "Levski Sofia",
+      "country": "Bulgaria",
+      "competitions": [
+        "UEL"
+      ],
+      "search": "Levski"
+    },
+    {
+      "name": "Lillestrom",
+      "country": "Norway",
+      "competitions": [
+        "UEL"
+      ]
+    },
+    {
+      "name": "NEC Nijmegen",
+      "country": "Netherlands",
+      "competitions": [
+        "UEL"
+      ],
+      "search": "Nijmegen"
+    },
+    {
+      "name": "OFI Crete",
+      "country": "Greece",
+      "competitions": [
+        "UEL"
+      ],
+      "search": "OFI"
+    },
+    {
+      "name": "Olympiakos Piraeus",
+      "country": "Greece",
+      "competitions": [
+        "UEL"
+      ],
+      "search": "Olympiakos"
+    },
+    {
+      "name": "Omonia Nicosia",
+      "country": "Cyprus",
+      "competitions": [
+        "UEL"
+      ],
+      "search": "Omonia"
+    },
+    {
+      "name": "Red Bull Salzburg",
+      "country": "Austria",
+      "competitions": [
+        "UEL"
+      ],
+      "search": "Salzburg"
+    },
+    {
+      "name": "Sparta Praha",
+      "country": "Czech-Republic",
+      "competitions": [
+        "UEL"
+      ],
+      "search": "Sparta Praha"
+    },
+    {
+      "name": "Sturm Graz",
+      "country": "Austria",
+      "competitions": [
+        "UEL"
+      ],
+      "search": "Sturm Graz"
+    },
+    {
+      "name": "Torreense",
+      "country": "Portugal",
+      "competitions": [
+        "UEL"
+      ]
+    },
+    {
+      "name": "Union St. Gilloise",
+      "country": "Belgium",
+      "competitions": [
+        "UEL"
+      ],
+      "search": "Gilloise"
+    },
+    {
+      "name": "Viktoria Plzen",
+      "country": "Czech-Republic",
+      "competitions": [
+        "UEL"
+      ],
+      "search": "Plzen"
+    },
+    {
+      "name": "Aarhus",
+      "country": "Denmark",
+      "competitions": [
+        "UECL"
+      ],
+      "search": "Aarhus"
+    },
+    {
+      "name": "Ajax",
+      "country": "Netherlands",
+      "competitions": [
+        "UECL"
+      ]
+    },
+    {
+      "name": "Borac Banja Luka",
+      "country": "Bosnia",
+      "competitions": [
+        "UECL"
+      ],
+      "search": "Borac"
+    },
+    {
+      "name": "Braga",
+      "country": "Portugal",
+      "competitions": [
+        "UECL"
+      ]
+    },
+    {
+      "name": "Brann",
+      "country": "Norway",
+      "competitions": [
+        "UECL"
+      ]
+    },
+    {
+      "name": "Copenhagen",
+      "country": "Denmark",
+      "competitions": [
+        "UECL"
+      ]
+    },
+    {
+      "name": "Crvena Zvezda",
+      "country": "Serbia",
+      "competitions": [
+        "UECL"
+      ],
+      "search": "Zvezda"
+    },
+    {
+      "name": "CSKA Sofia",
+      "country": "Bulgaria",
+      "competitions": [
+        "UECL"
+      ],
+      "search": "CSKA Sofia"
+    },
+    {
+      "name": "Egnatia",
+      "country": "Albania",
+      "competitions": [
+        "UECL"
+      ]
+    },
+    {
+      "name": "Gent",
+      "country": "Belgium",
+      "competitions": [
+        "UECL"
+      ]
+    },
+    {
+      "name": "Hajduk Split",
+      "country": "Croatia",
+      "competitions": [
+        "UECL"
+      ],
+      "search": "Hajduk"
+    },
+    {
+      "name": "Heart Of Midlothian",
+      "country": "Scotland",
+      "competitions": [
+        "UECL"
+      ],
+      "search": "Midlothian"
+    },
+    {
+      "name": "Iberia 1999",
+      "country": "Georgia",
+      "competitions": [
+        "UECL"
+      ],
+      "search": "Iberia"
+    },
+    {
+      "name": "Inter Club d'Escaldes",
+      "country": "Andorra",
+      "competitions": [
+        "UECL"
+      ],
+      "search": "Escaldes"
+    },
+    {
+      "name": "Jablonec",
+      "country": "Czech-Republic",
+      "competitions": [
+        "UECL"
+      ]
+    },
+    {
+      "name": "Kairat Almaty",
+      "country": "Kazakhstan",
+      "competitions": [
+        "UECL"
+      ],
+      "search": "Kairat"
+    },
+    {
+      "name": "Kauno Zalgiris",
+      "country": "Lithuania",
+      "competitions": [
+        "UECL"
+      ],
+      "search": "Zalgiris"
+    },
+    {
+      "name": "KuPS",
+      "country": "Finland",
+      "competitions": [
+        "UECL"
+      ]
+    },
+    {
+      "name": "Lincoln Red Imps",
+      "country": "Gibraltar",
+      "competitions": [
+        "UECL"
+      ],
+      "search": "Lincoln"
+    },
+    {
+      "name": "Lugano",
+      "country": "Switzerland",
+      "competitions": [
+        "UECL"
+      ]
+    },
+    {
+      "name": "Midtjylland",
+      "country": "Denmark",
+      "competitions": [
+        "UECL"
+      ]
+    },
+    {
+      "name": "Mjallby",
+      "country": "Sweden",
+      "competitions": [
+        "UECL"
+      ]
+    },
+    {
+      "name": "Nordsjaelland",
+      "country": "Denmark",
+      "competitions": [
+        "UECL"
+      ]
+    },
+    {
+      "name": "Pafos",
+      "country": "Cyprus",
+      "competitions": [
+        "UECL"
+      ]
+    },
+    {
+      "name": "Panathinaikos",
+      "country": "Greece",
+      "competitions": [
+        "UECL"
+      ]
+    },
+    {
+      "name": "Riga",
+      "country": "Latvia",
+      "competitions": [
+        "UECL"
+      ]
+    },
+    {
+      "name": "St. Truiden",
+      "country": "Belgium",
+      "competitions": [
+        "UECL"
+      ],
+      "search": "Truiden"
+    },
+    {
+      "name": "Thun",
+      "country": "Switzerland",
+      "competitions": [
+        "UECL"
+      ]
+    },
+    {
+      "name": "Trabzonspor",
+      "country": "Turkey",
+      "competitions": [
+        "UECL"
+      ]
+    },
+    {
+      "name": "Twente",
+      "country": "Netherlands",
+      "competitions": [
+        "UECL"
+      ]
+    },
+    {
+      "name": "Universitatea Craiova",
+      "country": "Romania",
+      "competitions": [
+        "UECL"
+      ],
+      "search": "Craiova"
+    }
+  ],
+  "_competitions_note": "Big-5 clubs only, from uefa.com league-phase access lists. UCL 21 + 15 non-big-5 = 36. UEL 12 + 24 = 36. UECL 5 (Brighton, Atalanta, Getafe, Freiburg, Monaco) + 31 = 36."
+}

@@ -51,6 +51,24 @@ def health():
         "version": "2.0.0",
     }
 
+@app.get("/health/quota")
+@app.get("/api/health/quota")
+def health_quota():
+    from cache_db import get_daily_api_calls, get_circuit_breaker_status
+    from api_football import get_daily_cap
+    calls_today = get_daily_api_calls()
+    cap = get_daily_cap()
+    is_active, cooldown_until, reason = get_circuit_breaker_status()
+    return {
+        "calls_today": calls_today,
+        "cap": cap,
+        "breaker": {
+            "is_active": is_active,
+            "cooldown_until": cooldown_until,
+            "reason": reason or "",
+        }
+    }
+
 @app.post("/api/ask")
 async def ask_analyst_root(request: dict):
     from routers.commentary import ask_analyst, AskRequest

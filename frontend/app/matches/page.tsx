@@ -16,7 +16,34 @@ const LEAGUES = [
   { id: 'bundesliga', label: 'Bundesliga' },
   { id: 'seriea', label: 'Serie A' },
   { id: 'ligue1', label: 'Ligue 1' },
+  { id: 'superlig', label: 'Süper Lig' },
+  { id: 'proleague', label: 'Pro League' },
 ]
+
+function isDisallowedMatch(m: Match): boolean {
+  const text = `${m.competition || ''} ${m.home_team?.name || ''} ${m.away_team?.name || ''}`.toLowerCase()
+  const homeName = (m.home_team?.name || '').toLowerCase()
+  const awayName = (m.away_team?.name || '').toLowerCase()
+
+  const EXCLUDE_WOMEN = [
+    'women', 'woman', "women's", 'feminin', 'feminine', 'femenin', 'femenina', 'femenil',
+    'frauen', 'damen', 'nwsl', 'wsl', 'wleague', 'damallsvenskan', 'naisliiga',
+    'keuken', 'ladies', ' wfc', ' fc women', ' (w)', ' w)'
+  ]
+  if (EXCLUDE_WOMEN.some(k => text.includes(k))) return true
+  if (homeName.endsWith(' w') || awayName.endsWith(' w') ||
+      homeName.endsWith(' women') || awayName.endsWith(' women') ||
+      homeName.endsWith(' ladies') || awayName.endsWith(' ladies') ||
+      homeName.endsWith(' (w)') || awayName.endsWith(' (w)')) return true
+
+  const EXCLUDE_GLOBAL = [
+    'mls', 'major league soccer', 'liga mx', 'saudi', 'roshn', 'j-league',
+    'a-league', 'k league', 'chinese super', 'csl', 'indian super', 'isl',
+    'conmebol', 'concacaf', 'copa libertadores', 'copa sudamericana'
+  ]
+  if (EXCLUDE_GLOBAL.some(k => text.includes(k))) return true
+  return false
+}
 
 function MatchesContent() {
   const searchParams = useSearchParams()
@@ -26,9 +53,16 @@ function MatchesContent() {
   )
   const [selectedLeague, setSelectedLeague] = useState<string>('all')
 
-  const { matches: liveMatches } = useMatches('live')
-  const { matches: upcomingMatches } = useMatches('upcoming')
-  const { matches: finishedMatches } = useMatches('finished')
+  const { matches: liveMatches, dataSource: liveDataSource } = useMatches('live')
+  const { matches: upcomingMatches, dataSource: upcomingDataSource } = useMatches('upcoming')
+  const { matches: finishedMatches, dataSource: finishedDataSource } = useMatches('finished')
+
+  const currentDataSource =
+    activeTab === 'live'
+      ? liveDataSource
+      : activeTab === 'upcoming'
+      ? upcomingDataSource
+      : finishedDataSource
 
   const currentList =
     activeTab === 'live'
@@ -37,20 +71,24 @@ function MatchesContent() {
       ? upcomingMatches
       : finishedMatches
 
-  // Filter by selected league
+  // Filter by selected league and strictly exclude women & non-European matches
   const filteredMatches = useMemo(() => {
-    if (selectedLeague === 'all') return currentList
-    return currentList.filter((m: Match) => {
-      const comp = (m.competition || '').toLowerCase()
-      if (selectedLeague === 'ucl') return comp.includes('champions') || comp.includes('ucl')
-      if (selectedLeague === 'uel') return comp.includes('europa') || comp.includes('uel')
-      if (selectedLeague === 'epl') return comp.includes('premier') || comp.includes('epl')
-      if (selectedLeague === 'laliga') return comp.includes('la liga') || comp.includes('laliga')
-      if (selectedLeague === 'bundesliga') return comp.includes('bundesliga')
-      if (selectedLeague === 'seriea') return comp.includes('serie a')
-      if (selectedLeague === 'ligue1') return comp.includes('ligue 1')
-      return true
-    })
+    return currentList
+      .filter((m: Match) => !isDisallowedMatch(m))
+      .filter((m: Match) => {
+        if (selectedLeague === 'all') return true
+        const comp = (m.competition || '').toLowerCase()
+        if (selectedLeague === 'ucl') return comp.includes('champions') || comp.includes('ucl')
+        if (selectedLeague === 'uel') return comp.includes('europa') || comp.includes('uel')
+        if (selectedLeague === 'epl') return comp.includes('premier') || comp.includes('epl')
+        if (selectedLeague === 'laliga') return comp.includes('la liga') || comp.includes('laliga')
+        if (selectedLeague === 'bundesliga') return comp.includes('bundesliga')
+        if (selectedLeague === 'seriea') return comp.includes('serie a')
+        if (selectedLeague === 'ligue1') return comp.includes('ligue 1')
+        if (selectedLeague === 'superlig') return comp.includes('super lig') || comp.includes('süper lig')
+        if (selectedLeague === 'proleague') return comp.includes('pro league') || comp.includes('jupiler')
+        return true
+      })
   }, [currentList, selectedLeague])
 
   // Group by competition
@@ -91,8 +129,8 @@ function MatchesContent() {
 
       {/* Sticky Filter Bar under header */}
       <div className="sticky top-[56px] z-30 bg-[#050508]/95 backdrop-blur-md pt-2 pb-4 border-b border-white/[0.06] flex flex-col gap-3">
-        {/* Status Tabs */}
-        <div className="flex items-center justify-between gap-4">
+        {/* Status Tabs & Data Source Indicator */}
+        <div className="flex items-center justify-between gap-4 flex-wrap">
           <SegmentedTabs
             tabs={[
               { id: 'live', label: 'Live', count: liveMatches.length },
@@ -103,6 +141,23 @@ function MatchesContent() {
             onChange={id => setActiveTab(id as any)}
             className="w-full sm:w-auto"
           />
+
+          {currentDataSource && currentDataSource !== 'live' && (
+            <span
+              className="px-2.5 py-1 rounded text-[11px] font-mono font-medium tracking-wide uppercase inline-flex items-center gap-1.5"
+              style={{
+                background: currentDataSource === 'mock' ? 'rgba(232, 0, 61, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                color: currentDataSource === 'mock' ? '#FF4D6D' : '#60A5FA',
+                border: `1px solid ${currentDataSource === 'mock' ? 'rgba(232, 0, 61, 0.35)' : 'rgba(59, 130, 246, 0.35)'}`,
+              }}
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full"
+                style={{ background: currentDataSource === 'mock' ? '#FF4D6D' : '#60A5FA' }}
+              />
+              {currentDataSource === 'mock' ? 'Demo data' : 'Cached'}
+            </span>
+          )}
         </div>
 
         {/* Competition Chips: horizontally scrollable with edge fade */}
