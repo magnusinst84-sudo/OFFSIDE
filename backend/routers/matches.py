@@ -323,13 +323,18 @@ TOP_LEAGUE_IDS = {
 def is_top_flight(f: dict) -> bool:
     league = f.get("league", {})
     lid = league.get("id")
+
+    # ── 1. TOP LEAGUE IDS (Allowlist FIRST - elite verified European competitions) ─
+    if lid in TOP_LEAGUE_IDS:
+        return True
+
+    # ── 2. EXCLUSIONS APPLIED ONLY TO NON-ALLOWLISTED IDS ───────────────────────
     country = (league.get("country") or "").lower()
     lname = (league.get("name") or "").lower()
     home_name = (f.get("teams", {}).get("home", {}).get("name") or "").lower()
     away_name = (f.get("teams", {}).get("away", {}).get("name") or "").lower()
     all_text = f"{lname} {country} {home_name} {away_name}"
 
-    # ── 1. STRICT EXCLUSIONS FIRST (Checked against league & team names) ─────
     # Women's football (explicit keyword check + team suffix check)
     EXCLUDE_WOMEN = [
         "women", "woman", "women's", "feminin", "feminine", "femenin", "femenina", "femenil",
@@ -364,88 +369,12 @@ def is_top_flight(f: dict) -> bool:
         "copa libertadores", "copa sudamericana", "champions cup",
         "africa", "afcon", "caf champions",
         "friendly", "club friendly", "international friendly",
-        "nfl", "futsal"
+        "nfl", "futsal", "league two", "liga 3", "3. lig"
     ]
     if any(k in all_text for k in EXCLUDE_GLOBAL):
         return False
 
-    # ── 2. TOP LEAGUE IDS (Elite verified European competitions) ──────────────
-    if lid in TOP_LEAGUE_IDS:
-        return True
-
-    # ── 3. ALLOWLIST BY COUNTRY / COMPETITION ──────────────────────────────────
-    # UEFA Elite competitions
-    if country in ("world", "europe") or "uefa" in lname:
-        if any(k in lname for k in ["champions league", "europa league", "conference league", "super cup"]):
-            return True
-        return False
-
-    # England
-    if country in ("england", "united kingdom"):
-        if any(k in lname for k in ["premier league", "fa cup", "efl cup", "carabao cup", "community shield"]):
-            if "2" not in lname and "development" not in lname and "trophy" not in lname:
-                return True
-        return False
-
-    # Spain
-    if country == "spain":
-        if any(k in lname for k in ["la liga", "primera division", "copa del rey", "supercopa"]):
-            if "2" not in lname and "hyper" not in lname and "rfef" not in lname:
-                return True
-        return False
-
-    # Germany
-    if country == "germany":
-        if ("bundesliga" in lname and "2" not in lname and "3" not in lname) \
-                or "dfb-pokal" in lname or "dfb pokal" in lname or "dfl-supercup" in lname:
-            return True
-        return False
-
-    # Italy
-    if country == "italy":
-        if ("serie a" in lname and "femminile" not in lname and "serie b" not in lname) \
-                or "coppa italia" in lname or "supercoppa" in lname:
-            return True
-        return False
-
-    # France
-    if country == "france":
-        if ("ligue 1" in lname and "2" not in lname and "feminine" not in lname) \
-                or "coupe de france" in lname or "trophee des champions" in lname:
-            return True
-        return False
-
-    # Turkey (Süper Lig & Cup)
-    if country in ("turkey", "türkiye") or "super lig" in lname or "süper lig" in lname:
-        if "1. lig" not in lname and "2. lig" not in lname:
-            return True
-        return False
-
-    # Belgium (Pro League & Cup)
-    if country == "belgium" or "pro league" in lname or "jupiler" in lname:
-        if "challenger" not in lname and "1b" not in lname:
-            return True
-        return False
-
-    # Netherlands (Eredivisie & Cup)
-    if country in ("netherlands", "holland") or "eredivisie" in lname:
-        if "eerste" not in lname:
-            return True
-        return False
-
-    # Portugal (Primeira Liga & Cup)
-    if country == "portugal" or "primeira liga" in lname:
-        if "segunda" not in lname and "liga 2" not in lname:
-            return True
-        return False
-
-    # Scotland (Premiership)
-    if country == "scotland" or "scottish premiership" in lname:
-        if "championship" not in lname and "league one" not in lname:
-            return True
-        return False
-
-    # Everything else: blocked
+    # Everything non-allowlisted: excluded
     return False
 
 # ---------------------------------------------------------------------------
@@ -455,17 +384,19 @@ def is_top_flight(f: dict) -> bool:
 async def fetch_fixtures(status: str):
     cache_key = f"fixtures_{status}_top_tier_v5"
     ttl = TTL_MATCHES_LIVE if status == "1H-2H-ET-P-LIVE" else TTL_MATCHES_UPCOMING if status == "NS" else TTL_MATCHES_FINISHED
+    # 1. Fresh cache
     cached = get_cache(cache_key)
     if cached is not None:
         return cached
 
     today_str = datetime.utcnow().strftime("%Y-%m-%d")
     try:
+        # 2. Upstream via wrapper
         if status == "1H-2H-ET-P-LIVE":
             r = await api_football_request("/fixtures", params={"live": "all"}, cache_key=cache_key)
             if not r:
                 stale = get_stale_cache(cache_key)
-                return stale if stale is not None else []
+                return stale if stale is not None else MOCK_LIVE_MATCHES
             all_live = r.get("response", [])
             fixtures = [f for f in all_live if is_top_flight(f)]
         elif status == "NS":
@@ -537,20 +468,42 @@ async def fetch_fixtures(status: str):
     except Exception as e:
         print(f"[matches] Error fetching fixtures: {e}")
 
+    # 3. Stale cache
     stale = get_stale_cache(cache_key)
     if stale is not None:
         return stale
-    return []
+
+    # 4. Mock fallback
+    if status == "1H-2H-ET-P-LIVE":
+        return MOCK_LIVE_MATCHES
+    elif status == "NS":
+        return MOCK_UPCOMING_MATCHES
+    else:
+        return MOCK_FINISHED_MATCHES
 
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
+
+@router.get("")
+@router.get("/")
+async def get_matches():
+    if is_mock_mode():
+        all_matches = MOCK_LIVE_MATCHES + MOCK_UPCOMING_MATCHES + MOCK_FINISHED_MATCHES
+        return {"matches": all_matches, "count": len(all_matches), "source": "mock"}
+    live = await fetch_fixtures("1H-2H-ET-P-LIVE")
+    if live:
+        return {"matches": live, "count": len(live), "source": "live"}
+    all_mock = MOCK_LIVE_MATCHES + MOCK_UPCOMING_MATCHES + MOCK_FINISHED_MATCHES
+    return {"matches": all_mock, "count": len(all_mock), "source": "mock"}
 
 @router.get("/live")
 async def get_live_matches():
     if is_mock_mode():
         return {"matches": MOCK_LIVE_MATCHES, "count": len(MOCK_LIVE_MATCHES), "source": "mock"}
     matches = await fetch_fixtures("1H-2H-ET-P-LIVE")
+    if not matches:
+        return {"matches": MOCK_LIVE_MATCHES, "count": len(MOCK_LIVE_MATCHES), "source": "mock"}
     return {"matches": matches, "count": len(matches), "source": "live"}
 
 @router.get("/upcoming")
