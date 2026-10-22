@@ -124,9 +124,24 @@ export function MatchRow({ match }: MatchRowProps) {
       className="group relative w-full cursor-pointer transition-colors border-b border-white/[0.06] hover:bg-[#1A1D27]/80 select-none"
     >
       {/* ─── DESKTOP VIEW (>= 768px): 8-column 56px row ─── */}
-      <div className="hidden md:grid items-center h-[56px] px-4 gap-3 grid-cols-[64px_1fr_28px_36px_28px_1fr_240px_24px]">
-        {/* 1. Time / Live Indicator */}
-        <div className="truncate">{timeDisplay}</div>
+      <div className="hidden md:grid items-center h-[56px] px-4 gap-3 grid-cols-[84px_1fr_28px_36px_28px_1fr_240px_24px]">
+        {/* 1. Time / Live Indicator + Data Source Badge */}
+        <div className="flex items-center gap-1.5 truncate">
+          {timeDisplay}
+          {match.data_source && match.data_source !== 'live' && (
+            <span
+              className="px-1.5 py-0.5 rounded text-[9px] font-mono font-medium uppercase tracking-wider shrink-0"
+              style={{
+                background: match.data_source === 'mock' ? 'rgba(232, 0, 61, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                color: match.data_source === 'mock' ? '#FF4D6D' : '#60A5FA',
+                border: `1px solid ${match.data_source === 'mock' ? 'rgba(232, 0, 61, 0.35)' : 'rgba(59, 130, 246, 0.35)'}`,
+              }}
+              title={match.data_source === 'mock' ? 'Demo data' : 'Cached'}
+            >
+              {match.data_source === 'mock' ? 'Demo' : 'Cached'}
+            </span>
+          )}
+        </div>
 
         {/* 2. Home Team Name (right-aligned) */}
         <div
@@ -198,7 +213,19 @@ export function MatchRow({ match }: MatchRowProps) {
             </span>
           </div>
 
-          <div className="shrink-0 font-mono text-[13px]">
+          <div className="shrink-0 flex items-center gap-1.5 font-mono text-[13px]">
+            {match.data_source && match.data_source !== 'live' && (
+              <span
+                className="px-1.5 py-0.5 rounded text-[9px] font-mono font-medium uppercase tracking-wider shrink-0"
+                style={{
+                  background: match.data_source === 'mock' ? 'rgba(232, 0, 61, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                  color: match.data_source === 'mock' ? '#FF4D6D' : '#60A5FA',
+                  border: `1px solid ${match.data_source === 'mock' ? 'rgba(232, 0, 61, 0.35)' : 'rgba(59, 130, 246, 0.35)'}`,
+                }}
+              >
+                {match.data_source === 'mock' ? 'Demo' : 'Cached'}
+              </span>
+            )}
             {isLive || isFinished ? (
               <span className="font-bold text-[var(--color-home,#3B82F6)]">{homeScore}</span>
             ) : (

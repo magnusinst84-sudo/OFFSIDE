@@ -5,6 +5,7 @@ import { useApp } from '@/context/AppContext'
 import { useSettings } from '@/hooks/useLocalStorage'
 import { X, Check } from 'lucide-react'
 import { SegmentedTabs } from '@/components/shared/Primitives'
+import { getQuotaHealth } from '@/lib/api'
 
 const SWATCHES = [
   { color: '#00FF87', name: 'Emerald' },
@@ -57,6 +58,19 @@ export function SettingsPanel() {
   const { settingsPanelOpen, closeSettings } = useApp()
   const { settings, setSettings } = useSettings()
   const modalRef = useRef<HTMLDivElement>(null)
+  const [quota, setQuota] = React.useState<{
+    calls_today: number
+    cap: number
+    breaker: { is_active: boolean; cooldown_until: number; reason: string }
+  } | null>(null)
+
+  useEffect(() => {
+    if (settingsPanelOpen) {
+      getQuotaHealth()
+        .then(setQuota)
+        .catch(() => setQuota(null))
+    }
+  }, [settingsPanelOpen])
 
   // Close on Escape key & trap focus
   useEffect(() => {
@@ -145,7 +159,7 @@ export function SettingsPanel() {
               {/* 1. Appearance */}
               <section className="flex flex-col gap-4">
                 <h3 className="text-[14px] font-semibold text-white">Appearance</h3>
-                
+
                 {/* Theme */}
                 <div className="flex flex-col gap-2">
                   <label className="text-[12px] text-[#94A3B8]">Theme</label>
@@ -197,7 +211,7 @@ export function SettingsPanel() {
               {/* 2. Motion */}
               <section className="flex flex-col gap-4">
                 <h3 className="text-[14px] font-semibold text-white">Motion</h3>
-                
+
                 <div className="flex flex-col gap-2">
                   <label className="text-[12px] text-[#94A3B8]">Animation intensity</label>
                   <SegmentedTabs
@@ -226,7 +240,7 @@ export function SettingsPanel() {
               {/* 3. Commentary */}
               <section className="flex flex-col gap-4">
                 <h3 className="text-[14px] font-semibold text-white">Commentary</h3>
-                
+
                 <div className="flex flex-col gap-2">
                   <label className="text-[12px] text-[#94A3B8]">Speed</label>
                   <SegmentedTabs
@@ -261,7 +275,7 @@ export function SettingsPanel() {
                   <h3 className="text-[14px] font-semibold text-white">Notifications</h3>
                   <span className="text-[11px] text-[#94A3B8] px-2 py-0.5 rounded bg-white/[0.04]">In-browser</span>
                 </div>
-                
+
                 {[
                   { key: 'matchStart' as const, label: 'Match start', desc: 'Alert when followed match kicks off' },
                   { key: 'momentumSpike' as const, label: 'Momentum spike', desc: 'Notify on significant swing in dominance' },
@@ -284,7 +298,7 @@ export function SettingsPanel() {
               {/* 5. Accessibility */}
               <section className="flex flex-col gap-4">
                 <h3 className="text-[14px] font-semibold text-white">Accessibility</h3>
-                
+
                 <div className="flex items-center justify-between py-1">
                   <div>
                     <div className="text-[14px] text-white">Large text</div>
@@ -319,16 +333,72 @@ export function SettingsPanel() {
                 </div>
               </section>
 
-              {/* Reset Footer */}
-              <div className="pt-4 border-t border-white/[0.08] flex justify-end pb-2">
-                <button
-                  type="button"
-                  onClick={resetDefaults}
-                  className="text-[13px] text-[#94A3B8] hover:text-white transition-colors cursor-pointer py-1 px-2"
-                >
-                  Reset to defaults
-                </button>
-              </div>
+              {/* 6. API Quota & Circuit Breaker */}
+              <section className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-[14px] font-semibold text-white">API Quota & Circuit Breaker</h3>
+                    {quota && (
+                      <span
+                        className="text-[10px] font-mono px-2 py-0.5 rounded uppercase font-semibold"
+                        style={{
+                          background: quota.breaker?.is_active ? 'rgba(232, 0, 61, 0.15)' : 'rgba(0, 255, 135, 0.15)',
+                          color: quota.breaker?.is_active ? '#FF4D6D' : '#00FF87',
+                          border: `1px solid ${quota.breaker?.is_active ? 'rgba(232, 0, 61, 0.3)' : 'rgba(0, 255, 135, 0.3)'}`,
+                        }}
+                      >
+                        {quota.breaker?.is_active ? 'Breaker Tripped' : 'Normal'}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.08] flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-[11px] text-[#94A3B8] uppercase font-mono">Calls Today (UTC)</div>
+                        <div className="text-[18px] font-mono font-bold text-white mt-0.5">
+                          {quota ? `${quota.calls_today} / ${quota.cap}` : 'Loading...'}
+                        </div>
+                      </div>
+                      {quota && (
+                        <div className="text-right">
+                          <div className="text-[11px] text-[#94A3B8] uppercase font-mono">Daily Cap</div>
+                          <div className="text-[13px] font-mono text-white/80 mt-0.5">
+                            {quota.cap} calls/day
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {quota && (
+                      <div className="w-full bg-white/[0.08] h-1.5 rounded-full overflow-hidden">
+                        <div
+                          className="h-full transition-all duration-300"
+                          style={{
+                            width: `${Math.min(100, (quota.calls_today / quota.cap) * 100)}%`,
+                            background: quota.calls_today >= quota.cap ? '#E8003D' : '#00FF87',
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {quota?.breaker?.is_active && (
+                      <div className="text-[12px] text-[#FF4D6D] bg-[#E8003D]/10 p-2.5 rounded border border-[#E8003D]/25 font-mono">
+                        Reason: {quota.breaker.reason || 'Active'}. Upstream paused for safety; serving cached/mock data.
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                {/* Reset Footer */}
+                <div className="pt-4 border-t border-white/[0.08] flex justify-end pb-2">
+                  <button
+                    type="button"
+                    onClick={resetDefaults}
+                    className="text-[13px] text-[#94A3B8] hover:text-white transition-colors cursor-pointer py-1 px-2"
+                  >
+                    Reset to defaults
+                  </button>
+                </div>
             </div>
           </motion.div>
         </div>

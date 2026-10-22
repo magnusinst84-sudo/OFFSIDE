@@ -58,6 +58,7 @@ export const useMatches = (tab: 'live' | 'upcoming' | 'finished') => {
   )
   return {
     matches: data?.matches ?? [],
+    dataSource: data?.data_source ?? data?.source ?? 'live',
     count: data?.count ?? 0,
     isLoading: !data && !error,
     error,

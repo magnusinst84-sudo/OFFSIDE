@@ -53,9 +53,16 @@ function MatchesContent() {
   )
   const [selectedLeague, setSelectedLeague] = useState<string>('all')
 
-  const { matches: liveMatches } = useMatches('live')
-  const { matches: upcomingMatches } = useMatches('upcoming')
-  const { matches: finishedMatches } = useMatches('finished')
+  const { matches: liveMatches, dataSource: liveDataSource } = useMatches('live')
+  const { matches: upcomingMatches, dataSource: upcomingDataSource } = useMatches('upcoming')
+  const { matches: finishedMatches, dataSource: finishedDataSource } = useMatches('finished')
+
+  const currentDataSource =
+    activeTab === 'live'
+      ? liveDataSource
+      : activeTab === 'upcoming'
+      ? upcomingDataSource
+      : finishedDataSource
 
   const currentList =
     activeTab === 'live'
@@ -122,8 +129,8 @@ function MatchesContent() {
 
       {/* Sticky Filter Bar under header */}
       <div className="sticky top-[56px] z-30 bg-[#050508]/95 backdrop-blur-md pt-2 pb-4 border-b border-white/[0.06] flex flex-col gap-3">
-        {/* Status Tabs */}
-        <div className="flex items-center justify-between gap-4">
+        {/* Status Tabs & Data Source Indicator */}
+        <div className="flex items-center justify-between gap-4 flex-wrap">
           <SegmentedTabs
             tabs={[
               { id: 'live', label: 'Live', count: liveMatches.length },
@@ -134,6 +141,23 @@ function MatchesContent() {
             onChange={id => setActiveTab(id as any)}
             className="w-full sm:w-auto"
           />
+
+          {currentDataSource && currentDataSource !== 'live' && (
+            <span
+              className="px-2.5 py-1 rounded text-[11px] font-mono font-medium tracking-wide uppercase inline-flex items-center gap-1.5"
+              style={{
+                background: currentDataSource === 'mock' ? 'rgba(232, 0, 61, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                color: currentDataSource === 'mock' ? '#FF4D6D' : '#60A5FA',
+                border: `1px solid ${currentDataSource === 'mock' ? 'rgba(232, 0, 61, 0.35)' : 'rgba(59, 130, 246, 0.35)'}`,
+              }}
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full"
+                style={{ background: currentDataSource === 'mock' ? '#FF4D6D' : '#60A5FA' }}
+              />
+              {currentDataSource === 'mock' ? 'Demo data' : 'Cached'}
+            </span>
+          )}
         </div>
 
         {/* Competition Chips: horizontally scrollable with edge fade */}

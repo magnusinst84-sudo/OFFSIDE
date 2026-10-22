@@ -90,4 +90,7 @@ export const getPredictionLog = () =>
 export const checkHealth = () =>
   api.get('/health').then(r => r.data)
 
+export const getQuotaHealth = () =>
+  api.get('/api/health/quota').then(r => r.data)
+
 export default api
