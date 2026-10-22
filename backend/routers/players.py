@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Query
+from fastapi.responses import JSONResponse
 import os, httpx
 from typing import Optional
 from cache_db import get_cache, set_cache
@@ -8,6 +9,7 @@ router = APIRouter()
 API_FOOTBALL_KEY = os.getenv("API_FOOTBALL_KEY", "")
 API_FOOTBALL_BASE = "https://v3.football.api-sports.io"
 HEADERS = {"x-apisports-key": API_FOOTBALL_KEY}
+ENABLE_LIVE_PLAYER_LOOKUP = os.getenv("ENABLE_LIVE_PLAYER_LOOKUP", "false").lower() in ("true", "1", "yes")
 
 TOP_PLAYERS = [
     {"id": 1100, "name": "Florian Wirtz", "team": "Germany", "position": "Midfielder", "nationality": "German", "number": 10, "club": "Bayer Leverkusen"},
@@ -110,7 +112,7 @@ async def search_players(q: str = Query(..., min_length=2)):
 
     results = [p for p in TOP_PLAYERS if q.lower() in p["name"].lower()]
     
-    if not results and API_FOOTBALL_KEY:
+    if not results and ENABLE_LIVE_PLAYER_LOOKUP and API_FOOTBALL_KEY:
         async with httpx.AsyncClient(timeout=8.0) as client:
             try:
                 r = await client.get(
@@ -167,7 +169,7 @@ async def get_player(player_id: int):
         set_cache(cache_key, data, ttl_seconds=86400)
         return data
     
-    if API_FOOTBALL_KEY:
+    if ENABLE_LIVE_PLAYER_LOOKUP and API_FOOTBALL_KEY:
         async with httpx.AsyncClient(timeout=8.0) as client:
             try:
                 r = await client.get(
@@ -203,7 +205,7 @@ async def get_player(player_id: int):
             except Exception:
                 pass
     
-    return {"error": "Player not found", "id": player_id}
+    return JSONResponse(status_code=404, content={"error": "Player not found", "id": player_id})
 
 @router.get("/{player_id}/dna")
 @router.post("/{player_id}/dna")
