@@ -1,11 +1,11 @@
 'use client'
-import React, { useState, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import React, { useState, useEffect, useMemo, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { ALL_LEAGUE_PLAYERS, filterByPill } from '@/lib/data/league'
 import type { LeagueFilter, LeaguePlayer } from '@/lib/data/league/league-types'
 import { Chip, Input, Button, Avatar, EmptyState } from '@/components/shared/Primitives'
-import { Search, ChevronRight, User } from 'lucide-react'
+import { Search, ChevronRight, User, X } from 'lucide-react'
 
 const POSITION_TABS = [
   { id: 'ALL', label: 'All' },
@@ -56,74 +56,114 @@ const LEAGUE_ORDER: Record<string, number> = {
   'Other': 5,
 }
 
-export default function PlayersPage() {
+function PlayersContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const clubQuery = searchParams.get('club') || ''
 
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(clubQuery)
   const [pill, setPill] = useState<LeagueFilter>('All')
   const [pos, setPos] = useState('ALL')
+  const [firstTeamOnly, setFirstTeamOnly] = useState(false)
   const [visibleCount, setVisibleCount] = useState(50)
 
-  // Filtered League Players
-  const filteredPlayers = useMemo(() => {
-    // 1. Filter by competition/league pill via filterByPill()
+  // Sync search if club query param updates
+  useEffect(() => {
+    if (clubQuery) {
+      setSearch(clubQuery)
+      setVisibleCount(50)
+    }
+  }, [clubQuery])
+
+  // Base list of players matching pill, search & position filter
+  const basePlayers = useMemo(() => {
     const byPill = filterByPill(pill)
-
-    // 2. Filter by search (name + club + shirt_name) & position
     const q = search.toLowerCase().trim()
-    return byPill
-      .filter(p => {
-        if (q) {
-          const matches =
-            p.name.toLowerCase().includes(q) ||
-            p.shirt_name.toLowerCase().includes(q) ||
-            p.club.toLowerCase().includes(q)
-          if (!matches) return false
-        }
-        if (pos !== 'ALL' && p.position !== pos) {
-          return false
-        }
-        return true
-      })
-      .sort((a, b) => {
-        // Default sort: league -> club -> position (GK, DF, MF, FW) -> number
-        const leagueA = LEAGUE_ORDER[a.league] ?? 99
-        const leagueB = LEAGUE_ORDER[b.league] ?? 99
-        if (leagueA !== leagueB) return leagueA - leagueB
 
-        const clubDiff = a.club.localeCompare(b.club)
-        if (clubDiff !== 0) return clubDiff
-
-        const posA = POSITION_ORDER[a.position] ?? 99
-        const posB = POSITION_ORDER[b.position] ?? 99
-        if (posA !== posB) return posA - posB
-
-        const numA = a.number ?? 999
-        const numB = b.number ?? 999
-        return numA - numB
-      })
+    return byPill.filter(p => {
+      if (q) {
+        const matches =
+          p.name.toLowerCase().includes(q) ||
+          p.shirt_name.toLowerCase().includes(q) ||
+          p.club.toLowerCase().includes(q)
+        if (!matches) return false
+      }
+      if (pos !== 'ALL' && p.position !== pos) {
+        return false
+      }
+      return true
+    })
   }, [pill, search, pos])
+
+  // Count how many conflict/reserve players exist in the current filtered set
+  const hiddenConflictCount = useMemo(() => {
+    return basePlayers.filter(p => p.number_conflict).length
+  }, [basePlayers])
+
+  // Final filtered and sorted player list
+  const filteredPlayers = useMemo(() => {
+    const list = firstTeamOnly
+      ? basePlayers.filter(p => !p.number_conflict)
+      : basePlayers
+
+    return [...list].sort((a, b) => {
+      const leagueA = LEAGUE_ORDER[a.league] ?? 99
+      const leagueB = LEAGUE_ORDER[b.league] ?? 99
+      if (leagueA !== leagueB) return leagueA - leagueB
+
+      const clubDiff = a.club.localeCompare(b.club)
+      if (clubDiff !== 0) return clubDiff
+
+      const posA = POSITION_ORDER[a.position] ?? 99
+      const posB = POSITION_ORDER[b.position] ?? 99
+      if (posA !== posB) return posA - posB
+
+      const numA = a.number ?? 999
+      const numB = b.number ?? 999
+      return numA - numB
+    })
+  }, [basePlayers, firstTeamOnly])
 
   return (
     <div className="w-full max-w-[1120px] mx-auto px-4 sm:px-6 pt-6 pb-32">
       {/* Title & Description */}
-      <div className="mb-6">
-        <h1
-          className="text-[32px] font-bold text-white tracking-tight mb-1"
-          style={{ fontFamily: 'Space Grotesk, sans-serif' }}
-        >
-          Players
-        </h1>
-        <p className="text-[14px] sm:text-[15px] text-[#94A3B8]">
-          Official club rosters across UCL, UEL, UECL, and the Big 5 European leagues ({ALL_LEAGUE_PLAYERS.length.toLocaleString()} players).
-        </p>
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div>
+          <h1
+            className="text-[32px] font-bold text-white tracking-tight mb-1"
+            style={{ fontFamily: 'Space Grotesk, sans-serif' }}
+          >
+            Players
+          </h1>
+          <p className="text-[14px] sm:text-[15px] text-[#94A3B8]">
+            Official club rosters across UCL, UEL, UECL, and the Big 5 European leagues ({ALL_LEAGUE_PLAYERS.length.toLocaleString()} players).
+          </p>
+        </div>
+
+        {clubQuery && (
+          <div className="flex items-center gap-2 p-2 rounded-xl bg-white/[0.04] border border-white/10 shrink-0">
+            <span className="text-[12px] text-[#94A3B8] font-mono">Filtered to club:</span>
+            <span className="text-[13px] text-white font-semibold">{clubQuery}</span>
+            <button
+              type="button"
+              onClick={() => {
+                setSearch('')
+                router.push('/players')
+              }}
+              className="p-1 rounded-md text-[#94A3B8] hover:text-white hover:bg-white/10"
+              title="Clear club filter"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Sticky Controls */}
       <div className="sticky top-[56px] z-30 bg-[#050508]/95 backdrop-blur-md pt-2 pb-4 border-b border-white/[0.08] flex flex-col gap-3">
-        {/* Row 1: Search & Position Filter Chips */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          <div className="w-full sm:max-w-xs">
+        {/* Row 1: Search, Position Chips & First Team Toggle */}
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          <div className="w-full md:max-w-xs">
             <Input
               placeholder="Search player or club..."
               value={search}
@@ -135,18 +175,40 @@ export default function PlayersPage() {
             />
           </div>
 
-          <div className="flex items-center gap-1.5 overflow-x-auto">
-            {POSITION_TABS.map(t => (
-              <Chip
-                key={t.id}
-                label={t.label}
-                selected={pos === t.id}
-                onClick={() => {
-                  setPos(t.id)
-                  setVisibleCount(50)
-                }}
-              />
-            ))}
+          <div className="flex items-center justify-between md:justify-end gap-3 overflow-x-auto">
+            {/* Position Filter Chips */}
+            <div className="flex items-center gap-1.5 overflow-x-auto">
+              {POSITION_TABS.map(t => (
+                <Chip
+                  key={t.id}
+                  label={t.label}
+                  selected={pos === t.id}
+                  onClick={() => {
+                    setPos(t.id)
+                    setVisibleCount(50)
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* First Team Only Toggle */}
+            <button
+              type="button"
+              onClick={() => setFirstTeamOnly(prev => !prev)}
+              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[12px] font-mono whitespace-nowrap transition-all cursor-pointer shrink-0 ${
+                firstTeamOnly
+                  ? 'bg-[var(--color-accent-soft,rgba(0,255,135,0.12))] border-[rgba(0,255,135,0.35)] text-[var(--color-accent,#00FF87)] font-medium shadow-sm'
+                  : 'bg-[#0F1117] border-white/10 text-[#94A3B8] hover:border-white/20 hover:text-white'
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full ${firstTeamOnly ? 'bg-[var(--color-accent,#00FF87)]' : 'bg-[#64748B]'}`} />
+              <span>First team only</span>
+              {firstTeamOnly && hiddenConflictCount > 0 && (
+                <span className="text-[11px] text-[#94A3B8] font-normal">
+                  ({hiddenConflictCount} hidden)
+                </span>
+              )}
+            </button>
           </div>
         </div>
 
@@ -174,10 +236,17 @@ export default function PlayersPage() {
 
       {/* Table Section */}
       <div className="mt-6">
-        <div className="mb-3 flex items-center justify-between text-[13px] text-[#94A3B8]">
-          <span>
-            Showing <strong className="text-white">{Math.min(visibleCount, filteredPlayers.length)}</strong> of <strong className="text-white">{filteredPlayers.length.toLocaleString()}</strong> players
-          </span>
+        <div className="mb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[13px] text-[#94A3B8]">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span>
+              Showing <strong className="text-white">{Math.min(visibleCount, filteredPlayers.length)}</strong> of <strong className="text-white">{filteredPlayers.length.toLocaleString()}</strong> players
+            </span>
+            {firstTeamOnly && hiddenConflictCount > 0 && (
+              <span className="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 font-mono text-[11px]">
+                {hiddenConflictCount} reserve/unverified hidden
+              </span>
+            )}
+          </div>
           <span className="font-mono text-[11px] text-[#64748B]">Sorted by League • Club • Pos • #</span>
         </div>
 
@@ -185,7 +254,7 @@ export default function PlayersPage() {
           <EmptyState
             icon={<User size={32} />}
             title="No players found"
-            description="No players matched your search, competition, or position filter."
+            description="No players matched your search, competition, position, or first-team filter."
             action={
               <button
                 type="button"
@@ -193,10 +262,11 @@ export default function PlayersPage() {
                   setSearch('')
                   setPill('All')
                   setPos('ALL')
+                  setFirstTeamOnly(false)
                 }}
                 className="text-[13px] text-[var(--color-accent,#00FF87)] hover:underline cursor-pointer"
               >
-                Clear filters
+                Clear all filters
               </button>
             }
           />
@@ -239,7 +309,7 @@ export default function PlayersPage() {
                                   className="px-1.5 py-0.2 rounded bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[10px] font-mono shrink-0"
                                   title="Shared shirt number in club squad (reserve or youth player)"
                                 >
-                                  # conflict
+                                  reserve/unverified
                                 </span>
                               )}
                             </div>
@@ -291,5 +361,13 @@ export default function PlayersPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function PlayersPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen text-[#94A3B8] p-8 flex items-center justify-center">Loading players...</div>}>
+      <PlayersContent />
+    </Suspense>
   )
 }
