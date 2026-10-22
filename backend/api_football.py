@@ -3,7 +3,7 @@ from typing import Optional, Dict, Any
 import httpx
 from cache_db import (
     get_daily_api_calls,
-    increment_daily_api_calls,
+    try_acquire_api_call_quota,
     get_circuit_breaker_status,
     trip_circuit_breaker,
     get_stale_cache,
@@ -20,11 +20,11 @@ def is_mock_mode() -> bool:
     return os.getenv("MOCK_MODE", "false").lower() in ("true", "1", "yes")
 
 def get_daily_cap() -> int:
-    cap = os.getenv("API_FOOTBALL_DAILY_CAP", "80")
+    cap = os.getenv("API_FOOTBALL_DAILY_CAP", "60")
     try:
         return int(cap)
     except Exception:
-        return 80
+        return 60
 
 def get_configured_ttl(env_var_suffix: str, default: int) -> int:
     val = os.getenv(f"TTL_{env_var_suffix.upper()}", "")
@@ -44,9 +44,11 @@ async def api_football_request(
     Enforces:
     1. Returns None if MOCK_MODE=true.
     2. Checks circuit-breaker cooldown; pauses upstream calls for 15 minutes if active.
-    3. Counts calls per UTC day in SQLite and enforces API_FOOTBALL_DAILY_CAP (default 80).
-    4. On cap hit, trips circuit breaker for 15 minutes.
-    5. On any response containing 'suspended', 'token' or 'requests', trips circuit breaker for 15 minutes.
+    3. Atomically checks and acquires quota in SQLite under API_FOOTBALL_DAILY_CAP (default 60).
+    4. On cap exhaustion, trips circuit breaker for 15 minutes.
+    5. Trip breaker ONLY on:
+       (a) HTTP 401, 403, 429
+       (b) JSON "errors" object whose KEYS include access, token, requests or rateLimit.
     6. Returns None on block/error so callers serve stale cache or mock data.
     """
     if is_mock_mode():
@@ -58,23 +60,19 @@ async def api_football_request(
         print(f"[api_football] Upstream paused until {cooldown_until} ({reason}).")
         return None
 
-    # Enforce daily call cap in SQLite
-    daily_cap = get_daily_cap()
-    today_calls = get_daily_api_calls()
-    if today_calls >= daily_cap:
-        trip_circuit_breaker(f"daily_cap_{daily_cap}_reached (current: {today_calls})", duration_seconds=900)
-        return None
-
     api_key = get_api_key()
     if not api_key:
+        return None
+
+    # Atomically acquire quota from daily cap
+    daily_cap = get_daily_cap()
+    if not try_acquire_api_call_quota(daily_cap):
+        trip_circuit_breaker(f"daily_cap_{daily_cap}_reached", duration_seconds=900)
         return None
 
     # Build request
     url = f"{API_FOOTBALL_BASE}{endpoint if endpoint.startswith('/') else '/' + endpoint}"
     headers = {"x-apisports-key": api_key}
-
-    # Increment daily call count before dispatch
-    increment_daily_api_calls()
 
     try:
         async with httpx.AsyncClient(timeout=timeout) as client:
@@ -83,12 +81,10 @@ async def api_football_request(
         print(f"[api_football] Upstream request error: {e}")
         return None
 
-    # Check response text for rate limit, auth, or quota keywords
-    resp_text_lower = r.text.lower()
-    for kw in ("suspended", "token", "requests"):
-        if kw in resp_text_lower:
-            trip_circuit_breaker(f"response body contained '{kw}'", duration_seconds=900)
-            return None
+    # Trip breaker on HTTP 401, 403, 429
+    if r.status_code in (401, 403, 429):
+        trip_circuit_breaker(f"http_status_{r.status_code}", duration_seconds=900)
+        return None
 
     if r.status_code != 200:
         return None
@@ -98,13 +94,15 @@ async def api_football_request(
     except Exception:
         return None
 
-    # Inspect errors field in JSON response
+    # Trip breaker ONLY if JSON "errors" object KEYS contain target keywords
     errors = data.get("errors")
-    if errors:
-        err_str = json.dumps(errors).lower()
-        for kw in ("suspended", "token", "requests"):
-            if kw in err_str:
-                trip_circuit_breaker(f"response errors contained '{kw}'", duration_seconds=900)
-                return None
+    if isinstance(errors, dict) and errors:
+        error_keys = {str(k).lower() for k in errors.keys()}
+        target_keys = {"access", "token", "requests", "ratelimit"}
+        matched = error_keys.intersection(target_keys)
+        if matched:
+            trip_circuit_breaker(f"error_keys_{','.join(matched)}", duration_seconds=900)
+            return None
 
     return data
+

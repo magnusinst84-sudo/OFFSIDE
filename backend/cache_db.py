@@ -137,6 +137,40 @@ def reset_daily_api_calls(day_utc: Optional[str] = None):
     except Exception as e:
         print(f"[cache] Error resetting daily calls: {e}")
 
+def try_acquire_api_call_quota(daily_cap: int, day_utc: Optional[str] = None) -> bool:
+    """
+    Atomically check if call_count < daily_cap and increment by 1.
+    Uses BEGIN IMMEDIATE transaction to guarantee atomic execution under concurrency.
+    Returns True if quota was acquired, False if cap reached.
+    """
+    if not day_utc:
+        day_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    conn = sqlite3.connect(DB_PATH, timeout=20.0)
+    try:
+        cur = conn.cursor()
+        cur.execute("BEGIN IMMEDIATE")
+        cur.execute("""
+            INSERT OR IGNORE INTO api_daily_calls (day_utc, call_count)
+            VALUES (?, 0)
+        """, (day_utc,))
+        cur.execute("""
+            UPDATE api_daily_calls
+            SET call_count = call_count + 1
+            WHERE day_utc = ? AND call_count < ?
+        """, (day_utc, daily_cap))
+        acquired = cur.rowcount > 0
+        conn.commit()
+        return acquired
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        print(f"[cache] Error in try_acquire_api_call_quota: {e}")
+        return False
+    finally:
+        conn.close()
+
 def get_circuit_breaker_status() -> Tuple[bool, float, str]:
     """Returns (is_active, cooldown_until, reason)."""
     try:
