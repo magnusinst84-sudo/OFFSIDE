@@ -210,16 +210,37 @@ async def get_player(player_id: int):
 @router.get("/{player_id}/dna")
 @router.post("/{player_id}/dna")
 async def get_player_dna_endpoint(player_id: int):
+    cache_key = f"player_dna_{player_id}"
+    cached = get_cache(cache_key)
+    if cached is not None:
+        return cached
+
     player = next((p for p in TOP_PLAYERS if p["id"] == player_id), None)
-    player_name = player["name"] if player else f"Player {player_id}"
-    team = player["team"] if player else "Unknown"
-    pos = player.get("position", "") if player else ""
     
-    dna = DNA_PROFILES.get(player_id, compute_dynamic_dna({"goals": 10, "assists": 5}, pos))
-    
-    return {
-        "player_id": player_id,
-        "player_name": player_name,
-        "team": team,
-        **dna,
-    }
+    if player_id in DNA_PROFILES:
+        dna = DNA_PROFILES[player_id]
+        res = {
+            "player_id": player_id,
+            "player_name": player["name"] if player else f"Player {player_id}",
+            "team": player["team"] if player else "Unknown",
+            **dna,
+        }
+        set_cache(cache_key, res, ttl_seconds=86400)
+        return res
+
+    if player:
+        dna = compute_dynamic_dna({"goals": 10, "assists": 5}, player.get("position", ""))
+        res = {
+            "player_id": player_id,
+            "player_name": player["name"],
+            "team": player["team"],
+            **dna,
+        }
+        set_cache(cache_key, res, ttl_seconds=86400)
+        return res
+
+    if ENABLE_LIVE_PLAYER_LOOKUP and API_FOOTBALL_KEY:
+        # Live lookup guarded when enabled
+        pass
+
+    return JSONResponse(status_code=404, content={"error": "Player not found", "id": player_id})
