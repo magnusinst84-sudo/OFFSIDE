@@ -141,6 +141,8 @@ async def get_player(player_id: int):
     cache_key = f"player_detail_{player_id}"
     cached = get_cache(cache_key)
     if cached is not None:
+        if isinstance(cached, dict) and cached.get("_not_found"):
+            return JSONResponse(status_code=404, content={"error": "Player not found", "id": player_id})
         return cached
 
     player = next((p for p in TOP_PLAYERS if p["id"] == player_id), None)
@@ -168,7 +170,7 @@ async def get_player(player_id: int):
     
     if ENABLE_LIVE_PLAYER_LOOKUP:
         r = await api_football_request("/players", params={"id": player_id}, cache_key=cache_key)
-        if r:
+        if r is not None:
             data = r.get("response", [])
             if data:
                 p = data[0]
@@ -193,9 +195,16 @@ async def get_player(player_id: int):
                 }
                 set_cache(cache_key, result, ttl_seconds=TTL_PLAYER_DETAIL)
                 return result
+            else:
+                set_cache(cache_key, {"_not_found": True}, ttl_seconds=TTL_PLAYER_DETAIL)
+                return JSONResponse(status_code=404, content={"error": "Player not found", "id": player_id})
+        else:
+            return JSONResponse(status_code=503, content={"error": "upstream_unavailable", "id": player_id})
     
     stale = get_stale_cache(cache_key)
     if stale is not None:
+        if isinstance(stale, dict) and stale.get("_not_found"):
+            return JSONResponse(status_code=404, content={"error": "Player not found", "id": player_id})
         return stale
     
     return JSONResponse(status_code=404, content={"error": "Player not found", "id": player_id})
@@ -206,6 +215,8 @@ async def get_player_dna_endpoint(player_id: int):
     cache_key = f"player_dna_{player_id}"
     cached = get_cache(cache_key)
     if cached is not None:
+        if isinstance(cached, dict) and cached.get("_not_found"):
+            return JSONResponse(status_code=404, content={"error": "Player not found", "id": player_id})
         return cached
 
     player = next((p for p in TOP_PLAYERS if p["id"] == player_id), None)
@@ -234,7 +245,9 @@ async def get_player_dna_endpoint(player_id: int):
 
     if ENABLE_LIVE_PLAYER_LOOKUP:
         live_player = await get_player(player_id)
-        if live_player and not isinstance(live_player, JSONResponse):
+        if isinstance(live_player, JSONResponse):
+            return live_player
+        elif live_player:
             dna = compute_dynamic_dna(live_player, live_player.get("position", ""))
             res = {
                 "player_id": player_id,
@@ -247,6 +260,8 @@ async def get_player_dna_endpoint(player_id: int):
 
     stale = get_stale_cache(cache_key)
     if stale is not None:
+        if isinstance(stale, dict) and stale.get("_not_found"):
+            return JSONResponse(status_code=404, content={"error": "Player not found", "id": player_id})
         return stale
 
     return JSONResponse(status_code=404, content={"error": "Player not found", "id": player_id})
