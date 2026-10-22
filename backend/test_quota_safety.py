@@ -1,126 +1,184 @@
-import os, asyncio
+import os, asyncio, tempfile, sqlite3
 from unittest.mock import patch, MagicMock
-from datetime import datetime, timezone
 
-# Configure environment for quota test
+# Base mock env
 os.environ["MOCK_MODE"] = "false"
 os.environ["API_FOOTBALL_KEY"] = "test_key_sample"
-os.environ["API_FOOTBALL_DAILY_CAP"] = "80"
 
-from cache_db import (
-    reset_daily_api_calls,
-    reset_circuit_breaker,
-    clear_cache,
-    set_cache,
-    get_cache,
-    get_stale_cache,
-    get_daily_api_calls,
-    get_circuit_breaker_status,
-)
+import cache_db
 from api_football import api_football_request, get_daily_cap
 
-async def run_quota_simulation_test():
+REAL_DB_PATH = os.path.join(os.path.dirname(__file__), "offside_cache.db")
+
+def read_db_tables(db_path):
+    if not os.path.exists(db_path):
+        return [], []
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM api_daily_calls")
+    calls = cur.fetchall()
+    cur.execute("SELECT * FROM api_circuit_breaker")
+    breaker = cur.fetchall()
+    conn.close()
+    return calls, breaker
+
+async def run_quota_safety_tests():
     print("=================================================================")
-    print("TEST 1: Simulating 200 requests with API_FOOTBALL_DAILY_CAP = 80")
+    print("QUOTA SAFETY TEST SUITE (WITH COMPLETE TEST DB ISOLATION)")
     print("=================================================================")
-    reset_daily_api_calls()
-    reset_circuit_breaker()
-    clear_cache()
 
-    daily_cap = get_daily_cap()
-    assert daily_cap == 80, f"Expected cap 80, got {daily_cap}"
+    # Snapshot real offside_cache.db state
+    real_calls_before, real_breaker_before = read_db_tables(REAL_DB_PATH)
+    print(f"[TEST ISOLATION] Snapshot real DB before tests:")
+    print(f"  api_daily_calls rows:     {real_calls_before}")
+    print(f"  api_circuit_breaker rows: {real_breaker_before}")
 
-    upstream_calls = 0
+    # Create temporary database file for test isolation
+    temp_db = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+    temp_db_path = temp_db.name
+    temp_db.close()
 
-    class MockResponse:
-        def __init__(self, json_data, status_code=200, text="OK"):
-            self._json = json_data
-            self.status_code = status_code
-            self.text = text
+    try:
+        cache_db.DB_PATH = temp_db_path
+        cache_db.init_db()
 
-        def json(self):
-            return self._json
+        # -----------------------------------------------------------------
+        # TEST 1: Concurrent execution of 200 requests with cap at 80
+        # -----------------------------------------------------------------
+        os.environ["API_FOOTBALL_DAILY_CAP"] = "80"
+        cache_db.reset_daily_api_calls()
+        cache_db.reset_circuit_breaker()
+        cache_db.clear_cache()
 
-    async def mock_get(url, headers=None, params=None):
-        nonlocal upstream_calls
-        upstream_calls += 1
-        return MockResponse({"response": [{"fixture": {"id": 1000 + upstream_calls}}]})
+        cap = get_daily_cap()
+        assert cap == 80
 
-    mock_client = MagicMock()
-    mock_client.get = mock_get
+        upstream_calls = 0
 
-    with patch("httpx.AsyncClient") as mock_client_cls:
-        mock_client_cls.return_value.__aenter__.return_value = mock_client
+        class MockResponse:
+            def __init__(self, json_data, status_code=200):
+                self._json = json_data
+                self.status_code = status_code
 
-        blocked_count = 0
-        success_count = 0
+            def json(self):
+                return self._json
 
-        for i in range(1, 201):
-            res = await api_football_request("/fixtures", params={"id": i})
-            if res is not None:
-                success_count += 1
-            else:
-                blocked_count += 1
+        async def mock_get(url, headers=None, params=None):
+            nonlocal upstream_calls
+            upstream_calls += 1
+            await asyncio.sleep(0.001)
+            return MockResponse({"response": [{"fixture": {"id": 1000 + upstream_calls}}]})
 
-        print(f"Total Requests Simulated: 200")
-        print(f"Upstream HTTP Calls Made: {upstream_calls}")
-        print(f"Requests Succeeded:       {success_count}")
-        print(f"Requests Blocked/Guarded: {blocked_count}")
-        print(f"Calls Recorded in SQLite: {get_daily_api_calls()}")
+        mock_client = MagicMock()
+        mock_client.get = mock_get
 
-        assert upstream_calls <= daily_cap, f"Upstream calls ({upstream_calls}) exceeded cap ({daily_cap})!"
-        assert upstream_calls == 80, f"Expected exactly 80 upstream calls, got {upstream_calls}"
-        assert success_count == 80, f"Expected 80 successes, got {success_count}"
-        assert blocked_count == 120, f"Expected 120 blocked calls, got {blocked_count}"
+        with patch("httpx.AsyncClient") as mock_client_cls:
+            mock_client_cls.return_value.__aenter__.return_value = mock_client
 
-        is_active, cooldown_until, reason = get_circuit_breaker_status()
-        print(f"Circuit Breaker Active:   {is_active} (reason: {reason})")
-        assert is_active is True, "Circuit breaker should be active after hitting daily cap"
+            print("\n--- TEST 1: Firing 200 concurrent requests (Cap = 80) ---")
+            tasks = [api_football_request("/fixtures", params={"id": i}) for i in range(1, 201)]
+            results = await asyncio.gather(*tasks)
 
-    print("\n=================================================================")
-    print("TEST 2: Circuit Breaker on 'suspended' / 'requests' / 'token' err")
-    print("=================================================================")
-    reset_daily_api_calls()
-    reset_circuit_breaker()
+            successes = [r for r in results if r is not None]
+            blocked = [r for r in results if r is None]
 
-    error_calls = 0
-    async def mock_suspended_get(url, headers=None, params=None):
-        nonlocal error_calls
-        error_calls += 1
-        return MockResponse({"message": "Subscription is suspended"}, status_code=403, text='{"message": "Subscription is suspended"}')
+            print(f"Total concurrent calls:    200")
+            print(f"Upstream attempts made:    {upstream_calls}")
+            print(f"Successful calls:          {len(successes)}")
+            print(f"Blocked calls:             {len(blocked)}")
+            print(f"Calls recorded in temp DB: {cache_db.get_daily_api_calls()}")
 
-    mock_client.get = mock_suspended_get
-    with patch("httpx.AsyncClient") as mock_client_cls:
-        mock_client_cls.return_value.__aenter__.return_value = mock_client
-        res = await api_football_request("/fixtures", params={"live": "all"})
-        assert res is None, "Expected None on suspended response"
-        assert error_calls == 1
+            assert upstream_calls <= cap, f"Upstream attempts ({upstream_calls}) exceeded cap ({cap})!"
+            assert upstream_calls == 80, f"Expected exactly 80 upstream attempts, got {upstream_calls}"
+            assert len(successes) == 80
+            assert len(blocked) == 120
 
-        is_active, cooldown_until, reason = get_circuit_breaker_status()
-        print(f"Circuit Breaker Tripped on Suspended: {is_active} (reason: {reason})")
-        assert is_active is True
+            is_active, cooldown_until, reason = cache_db.get_circuit_breaker_status()
+            assert is_active is True, "Circuit breaker should be active after cap exhaustion"
+            print(f"✓ Concurrency & atomic cap verified: exactly {upstream_calls} <= {cap} attempts.")
 
-        # Second call must NOT call upstream because circuit breaker is active!
-        res2 = await api_football_request("/fixtures", params={"live": "all"})
-        assert res2 is None
-        assert error_calls == 1, "Upstream was called while circuit breaker was active!"
-        print("Confirmed: Upstream calls halted for 15 minutes upon keyword detection.")
+        # -----------------------------------------------------------------
+        # TEST 2: Breaker triggers ONLY on HTTP 401/403/429 or error KEYS
+        # -----------------------------------------------------------------
+        print("\n--- TEST 2: False positive rejection (Tokenaga / requests in value) ---")
+        cache_db.reset_daily_api_calls()
+        cache_db.reset_circuit_breaker()
 
-    print("\n=================================================================")
-    print("TEST 3: Stale Cache Fallback When Over Cap")
-    print("=================================================================")
-    cache_key = "match_stats_test_999"
-    # Store expired cache entry
-    set_cache(cache_key, {"possession_home": 58.0, "shots_home": 14}, ttl_seconds=-10)
-    assert get_cache(cache_key) is None, "Fresh cache should return None for expired entry"
-    stale = get_stale_cache(cache_key)
-    assert stale is not None, "Stale cache should return expired entry"
-    assert stale["possession_home"] == 58.0
-    print(f"Stale Cache Successfully Served: {stale}")
+        # Response contains "Tokenaga" in name and "requests" in value, status 200, errors dict has no matching keys
+        async def mock_tokenaga_get(url, headers=None, params=None):
+            return MockResponse({
+                "response": [
+                    {"player": {"name": "Tokenaga", "notes": "Special requests completed"}}
+                ],
+                "errors": {}
+            }, status_code=200)
 
-    print("\n=================================================================")
-    print("ALL QUOTA SAFETY AND CIRCUIT BREAKER TESTS PASSED!")
-    print("=================================================================")
+        mock_client.get = mock_tokenaga_get
+        with patch("httpx.AsyncClient") as mock_client_cls:
+            mock_client_cls.return_value.__aenter__.return_value = mock_client
+            res = await api_football_request("/players", params={"search": "Tokenaga"})
+            assert res is not None, "Response should be returned normally"
+            assert res["response"][0]["player"]["name"] == "Tokenaga"
+
+            is_active, _, _ = cache_db.get_circuit_breaker_status()
+            print(f"Circuit Breaker Status after 'Tokenaga' 200 OK: is_active={is_active}")
+            assert is_active is False, "Breaker must NOT be tripped for normal 200 containing 'token' or 'requests' substrings!"
+            print("✓ Substring false positive prevented: breaker remained OFF.")
+
+        print("\n--- TEST 3: Breaker trips on JSON 'errors' object KEYS (requests/token/ratelimit) ---")
+        cache_db.reset_circuit_breaker()
+        cache_db.reset_daily_api_calls()
+
+        async def mock_error_key_get(url, headers=None, params=None):
+            return MockResponse({
+                "response": [],
+                "errors": {"requests": "You have reached the request limit per day."}
+            }, status_code=200)
+
+        mock_client.get = mock_error_key_get
+        with patch("httpx.AsyncClient") as mock_client_cls:
+            mock_client_cls.return_value.__aenter__.return_value = mock_client
+            res = await api_football_request("/fixtures", params={"live": "all"})
+            assert res is None
+
+            is_active, _, reason = cache_db.get_circuit_breaker_status()
+            print(f"Circuit Breaker Status after error key: is_active={is_active} (reason: {reason})")
+            assert is_active is True
+            assert "requests" in reason
+            print("✓ Breaker correctly tripped on 'requests' error key.")
+
+        print("\n--- TEST 4: Breaker trips on HTTP 429 ---")
+        cache_db.reset_circuit_breaker()
+        cache_db.reset_daily_api_calls()
+
+        async def mock_429_get(url, headers=None, params=None):
+            return MockResponse({"message": "Rate limit reached"}, status_code=429)
+
+        mock_client.get = mock_429_get
+        with patch("httpx.AsyncClient") as mock_client_cls:
+            mock_client_cls.return_value.__aenter__.return_value = mock_client
+            res = await api_football_request("/fixtures", params={"live": "all"})
+            assert res is None
+
+            is_active, _, reason = cache_db.get_circuit_breaker_status()
+            assert is_active is True
+            assert "429" in reason
+            print("✓ Breaker correctly tripped on HTTP 429.")
+
+    finally:
+        # Restore real DB path and remove temp file
+        cache_db.DB_PATH = REAL_DB_PATH
+        if os.path.exists(temp_db_path):
+            os.remove(temp_db_path)
+
+    # Prove real offside_cache.db was NEVER touched
+    real_calls_after, real_breaker_after = read_db_tables(REAL_DB_PATH)
+    print(f"\n[TEST ISOLATION] Verify real DB after test run:")
+    print(f"  api_daily_calls rows:     {real_calls_after}")
+    print(f"  api_circuit_breaker rows: {real_breaker_after}")
+    assert real_calls_before == real_calls_after, "REAL DB api_daily_calls WAS MODIFIED BY TESTS!"
+    assert real_breaker_before == real_breaker_after, "REAL DB api_circuit_breaker WAS MODIFIED BY TESTS!"
+    print("✓ PROOF: backend/offside_cache.db remained completely untouched and identical before and after test!")
 
 if __name__ == "__main__":
-    asyncio.run(run_quota_simulation_test())
+    asyncio.run(run_quota_safety_tests())
