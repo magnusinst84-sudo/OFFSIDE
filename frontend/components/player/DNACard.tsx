@@ -3,7 +3,29 @@
 // ════════════════════════════════════════════════════════════
 'use client'
 import React, { useState } from 'react'
-import type { LegacyPlayer } from '@/lib/data/types'
+export interface LegacyPlayer {
+  id: string
+  name: string
+  shirt_name?: string
+  team?: string
+  team_code?: string
+  position: string
+  number: number
+  club: string
+  age: number
+  dna_score: number
+  attributes: {
+    pace: number
+    shooting: number
+    passing: number
+    dribbling: number
+    defending: number
+    physicality: number
+  }
+  strengths: string[]
+  weaknesses: string[]
+  predicted_impact: number
+}
 
 interface DNACardProps {
   player: LegacyPlayer
