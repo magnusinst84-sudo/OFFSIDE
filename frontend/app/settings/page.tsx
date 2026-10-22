@@ -2,6 +2,7 @@
 import React from 'react'
 import { useApp } from '@/context/AppContext'
 import { SettingsPanel } from '@/components/settings/SettingsPanel'
+import { getQuotaHealth } from '@/lib/api'
 
 export default function SettingsPage() {
   const { openSettings } = useApp()
@@ -11,8 +12,7 @@ export default function SettingsPage() {
   // Auto-open settings on mount and load quota
   React.useEffect(() => {
     openSettings()
-    fetch('/api/health/quota')
-      .then((r) => (r.ok ? r.json() : null))
+    getQuotaHealth()
       .then((d) => {
         if (d) setQuota(d)
       })

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
 import os, httpx, asyncio
 from datetime import datetime, timedelta
 from cache_db import get_cache, set_cache, get_stale_cache
@@ -480,19 +481,26 @@ async def get_match_detail(match_id: int):
     cache_key = f"match_detail_{match_id}"
     cached = get_cache(cache_key)
     if cached is not None:
+        if isinstance(cached, dict) and cached.get("_not_found"):
+            raise HTTPException(status_code=404, detail=f"Match {match_id} not found")
         return {**cached, "data_source": "cache"}
 
     r = await api_football_request("/fixtures", params={"id": match_id}, cache_key=cache_key)
-    if r:
+    if r is not None:
         resp = r.get("response", [])
         if resp:
             detail = fmt_match(resp[0])
             ttl = TTL_MATCH_DETAIL_LIVE if detail["status"] == "live" else TTL_MATCH_DETAIL_FINISHED
             set_cache(cache_key, detail, ttl_seconds=ttl)
             return {**detail, "data_source": "live"}
+        else:
+            set_cache(cache_key, {"_not_found": True}, ttl_seconds=TTL_MATCH_DETAIL_FINISHED)
+            raise HTTPException(status_code=404, detail=f"Match {match_id} not found")
 
     stale = get_stale_cache(cache_key)
     if stale is not None:
+        if isinstance(stale, dict) and stale.get("_not_found"):
+            raise HTTPException(status_code=404, detail=f"Match {match_id} not found")
         return {**stale, "data_source": "stale"}
 
     # Check cached fixture lists before falling back
@@ -508,7 +516,7 @@ async def get_match_detail(match_id: int):
     if match_id in MOCK_MATCH_MAP:
         return {**MOCK_MATCH_MAP[match_id], "data_source": "mock"}
 
-    raise HTTPException(status_code=404, detail=f"Match {match_id} not found")
+    return JSONResponse(status_code=503, content={"error": "upstream_unavailable"})
 
 @router.get("/{match_id}/stats")
 async def get_match_stats(match_id: int):
