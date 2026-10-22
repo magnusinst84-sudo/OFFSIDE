@@ -1,15 +1,20 @@
 from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
-import os, httpx
+import os
 from typing import Optional
-from cache_db import get_cache, set_cache
+from cache_db import get_cache, set_cache, get_stale_cache
+from api_football import api_football_request, get_configured_ttl
 
 router = APIRouter()
 
 API_FOOTBALL_KEY = os.getenv("API_FOOTBALL_KEY", "")
 API_FOOTBALL_BASE = "https://v3.football.api-sports.io"
-HEADERS = {"x-apisports-key": API_FOOTBALL_KEY}
 ENABLE_LIVE_PLAYER_LOOKUP = os.getenv("ENABLE_LIVE_PLAYER_LOOKUP", "false").lower() in ("true", "1", "yes")
+
+# Configurable TTLs
+TTL_PLAYER_SEARCH = get_configured_ttl("PLAYER_SEARCH", 86400)
+TTL_PLAYER_DETAIL = get_configured_ttl("PLAYER_DETAIL", 86400)
+TTL_PLAYER_DNA = get_configured_ttl("PLAYER_DNA", 86400)
 
 TOP_PLAYERS = [
     {"id": 1100, "name": "Florian Wirtz", "team": "Germany", "position": "Midfielder", "nationality": "German", "number": 10, "club": "Bayer Leverkusen"},
@@ -112,31 +117,23 @@ async def search_players(q: str = Query(..., min_length=2)):
 
     results = [p for p in TOP_PLAYERS if q.lower() in p["name"].lower()]
     
-    if not results and ENABLE_LIVE_PLAYER_LOOKUP and API_FOOTBALL_KEY:
-        async with httpx.AsyncClient(timeout=8.0) as client:
-            try:
-                r = await client.get(
-                    f"{API_FOOTBALL_BASE}/players",
-                    headers=HEADERS,
-                    params={"search": q}
-                )
-                if r.status_code == 200:
-                    api_players = r.json().get("response", [])
-                    for p in api_players[:10]:
-                        player = p.get("player", {})
-                        results.append({
-                            "id": player.get("id"),
-                            "name": player.get("name", ""),
-                            "team": p.get("statistics", [{}])[0].get("team", {}).get("name", ""),
-                            "position": player.get("position", ""),
-                            "nationality": player.get("nationality", ""),
-                            "number": 0,
-                        })
-            except Exception:
-                pass
+    if not results and ENABLE_LIVE_PLAYER_LOOKUP:
+        r = await api_football_request("/players", params={"search": q}, cache_key=cache_key)
+        if r:
+            api_players = r.get("response", [])
+            for p in api_players[:10]:
+                player = p.get("player", {})
+                results.append({
+                    "id": player.get("id"),
+                    "name": player.get("name", ""),
+                    "team": p.get("statistics", [{}])[0].get("team", {}).get("name", ""),
+                    "position": player.get("position", ""),
+                    "nationality": player.get("nationality", ""),
+                    "number": 0,
+                })
     
     data = {"players": results[:20], "count": len(results)}
-    set_cache(cache_key, data, ttl_seconds=86400) # Cache search for 24 hours
+    set_cache(cache_key, data, ttl_seconds=TTL_PLAYER_SEARCH)
     return data
 
 @router.get("/{player_id}")
@@ -166,44 +163,40 @@ async def get_player(player_id: int):
                 {"x": 72, "y": 55, "xg": 0.04, "outcome": "off"},
             ]
         }
-        set_cache(cache_key, data, ttl_seconds=86400)
+        set_cache(cache_key, data, ttl_seconds=TTL_PLAYER_DETAIL)
         return data
     
-    if ENABLE_LIVE_PLAYER_LOOKUP and API_FOOTBALL_KEY:
-        async with httpx.AsyncClient(timeout=8.0) as client:
-            try:
-                r = await client.get(
-                    f"{API_FOOTBALL_BASE}/players",
-                    headers=HEADERS,
-                    params={"id": player_id}
-                )
-                if r.status_code == 200:
-                    data = r.json().get("response", [])
-                    if data:
-                        p = data[0]
-                        pl = p.get("player", {})
-                        stats = p.get("statistics", [{}])[0]
-                        result = {
-                            "id": pl.get("id"),
-                            "name": pl.get("name"),
-                            "team": stats.get("team", {}).get("name", ""),
-                            "position": pl.get("position", ""),
-                            "nationality": pl.get("nationality", ""),
-                            "age": pl.get("age"),
-                            "height": pl.get("height", ""),
-                            "foot": "Right",
-                            "number": stats.get("games", {}).get("number", 0),
-                            "goals": stats.get("goals", {}).get("total", 0),
-                            "assists": stats.get("goals", {}).get("assists", 0),
-                            "xg": None,
-                            "xa": None,
-                            "minutes_played": stats.get("games", {}).get("minutes", 0),
-                            "shots": [],
-                        }
-                        set_cache(cache_key, result, ttl_seconds=86400)
-                        return result
-            except Exception:
-                pass
+    if ENABLE_LIVE_PLAYER_LOOKUP:
+        r = await api_football_request("/players", params={"id": player_id}, cache_key=cache_key)
+        if r:
+            data = r.get("response", [])
+            if data:
+                p = data[0]
+                pl = p.get("player", {})
+                stats = p.get("statistics", [{}])[0]
+                result = {
+                    "id": pl.get("id"),
+                    "name": pl.get("name"),
+                    "team": stats.get("team", {}).get("name", ""),
+                    "position": pl.get("position", ""),
+                    "nationality": pl.get("nationality", ""),
+                    "age": pl.get("age"),
+                    "height": pl.get("height", ""),
+                    "foot": "Right",
+                    "number": stats.get("games", {}).get("number", 0),
+                    "goals": stats.get("goals", {}).get("total", 0),
+                    "assists": stats.get("goals", {}).get("assists", 0),
+                    "xg": None,
+                    "xa": None,
+                    "minutes_played": stats.get("games", {}).get("minutes", 0),
+                    "shots": [],
+                }
+                set_cache(cache_key, result, ttl_seconds=TTL_PLAYER_DETAIL)
+                return result
+    
+    stale = get_stale_cache(cache_key)
+    if stale is not None:
+        return stale
     
     return JSONResponse(status_code=404, content={"error": "Player not found", "id": player_id})
 
@@ -225,7 +218,7 @@ async def get_player_dna_endpoint(player_id: int):
             "team": player["team"] if player else "Unknown",
             **dna,
         }
-        set_cache(cache_key, res, ttl_seconds=86400)
+        set_cache(cache_key, res, ttl_seconds=TTL_PLAYER_DNA)
         return res
 
     if player:
@@ -236,11 +229,24 @@ async def get_player_dna_endpoint(player_id: int):
             "team": player["team"],
             **dna,
         }
-        set_cache(cache_key, res, ttl_seconds=86400)
+        set_cache(cache_key, res, ttl_seconds=TTL_PLAYER_DNA)
         return res
 
-    if ENABLE_LIVE_PLAYER_LOOKUP and API_FOOTBALL_KEY:
-        # Live lookup guarded when enabled
-        pass
+    if ENABLE_LIVE_PLAYER_LOOKUP:
+        live_player = await get_player(player_id)
+        if live_player and not isinstance(live_player, JSONResponse):
+            dna = compute_dynamic_dna(live_player, live_player.get("position", ""))
+            res = {
+                "player_id": player_id,
+                "player_name": live_player.get("name", f"Player {player_id}"),
+                "team": live_player.get("team", "Unknown"),
+                **dna,
+            }
+            set_cache(cache_key, res, ttl_seconds=TTL_PLAYER_DNA)
+            return res
+
+    stale = get_stale_cache(cache_key)
+    if stale is not None:
+        return stale
 
     return JSONResponse(status_code=404, content={"error": "Player not found", "id": player_id})

@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from api_football import api_football_request
 
 router = APIRouter()
 
